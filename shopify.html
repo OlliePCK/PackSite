@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopify Lookup - The Pack</title>
+    <link rel="icon" type="image/svg+xml" href="/img/pck.svg?v=2">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ff006a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="The Pack">
+    <link rel="apple-touch-icon" href="/img/pck-192.png">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/nav.js" defer></script>
+    <style>
+        /* Page-specific styles */
+        .lookup-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .lookup-form input {
+            flex: 1;
+            min-width: 250px;
+            padding: 14px 18px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .lookup-form input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .lookup-form button {
+            padding: 14px 28px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: filter 0.2s;
+        }
+
+        .lookup-form button:hover {
+            filter: brightness(1.1);
+        }
+
+        .lookup-form button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Product display */
+        .product-result {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .product-result.show {
+            display: block;
+        }
+
+        .product-header {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            margin-bottom: 25px;
+        }
+
+        .product-image {
+            width: 150px;
+            height: 150px;
+            border-radius: 12px;
+            object-fit: cover;
+            background: var(--bg-dark);
+        }
+
+        .product-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .product-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .product-vendor {
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .product-type {
+            display: inline-block;
+            background: var(--border-color);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Variants grid */
+        .variants-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .variants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .variant-card {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .variant-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+        }
+
+        .variant-title {
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .variant-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-price {
+            background: rgba(255, 0, 106, 0.15);
+            color: var(--primary);
+        }
+
+        .badge-stock {
+            background: rgba(0, 255, 0, 0.15);
+            color: var(--success);
+        }
+
+        .badge-stock.low {
+            background: rgba(255, 170, 0, 0.15);
+            color: var(--warning);
+        }
+
+        .badge-stock.oos {
+            background: rgba(255, 0, 0, 0.15);
+            color: var(--error);
+        }
+
+        .variant-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .variant-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: filter 0.2s;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .variant-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .variant-btn.secondary {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .variant-btn:hover {
+            filter: brightness(1.1);
+        }
+
+        /* Status messages */
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+            .product-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .product-info {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="neuro"></canvas>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">
+            <img src="/img/texture.svg" alt="Pack Logo" class="nav-logo-img">
+        </a>
+        <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+        <div class="nav-links" id="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            <a href="/nowplaying.html" class="nav-link">Now Playing</a>
+            <a href="/leaderboard.html" class="nav-link">Leaderboard</a>
+            <a href="/history.html" class="nav-link">History</a>
+            <a href="/youtube.html" class="nav-link">YouTube</a>
+            <a href="/monitors.html" class="nav-link">Monitors</a>
+            <a href="/shopify.html" class="nav-link active">Shopify</a>
+            <!-- Mobile-only items -->
+            <div class="mobile-nav-divider" id="mobile-divider"></div>
+            <div class="mobile-user-info" id="mobile-user-info">
+                <img class="user-avatar" id="mobile-user-avatar" alt="Avatar">
+                <span id="mobile-user-name"></span>
+            </div>
+            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings">⚙️ Settings</a>
+            <a href="#" class="mobile-nav-item" id="mobile-logout">🚪 Logout</a>
+            <a href="#" class="mobile-login-btn" id="mobile-login">Login with Discord</a>
+        </div>
+        <div class="nav-auth" id="nav-auth">
+            <a href="#" id="login-btn" class="nav-btn">Login with Discord</a>
+            <div id="user-info" class="user-info hidden">
+                <div class="user-info-toggle">
+                    <img id="user-avatar" class="user-avatar" alt="Avatar" crossorigin="anonymous">
+                    <span id="user-name"></span>
+                    <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <div class="user-dropdown">
+                    <div class="user-dropdown-inner">
+                        <a href="/settings.html" class="dropdown-item">
+                            <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                            Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" id="logout-btn" class="dropdown-item" onclick="packBotAPI.logout()">
+                            <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14l5-5-5-5m5 5H9"/></svg>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <h1 class="page-title">🛒 Shopify Product Tool</h1>
+        <p class="page-subtitle">Lookup product stock levels and add-to-cart links</p>
+        
+        <!-- Not Logged In State -->
+        <div id="not-logged-in" class="card">
+            <div class="empty-state">
+                <div class="empty-state-icon">🔐</div>
+                <h3>Login Required</h3>
+                <p>Please login with Discord to use the Shopify tool</p>
+                <a href="#" onclick="packBotAPI.login(); return false;" class="nav-btn" style="display: inline-block; margin-top: 20px;">
+                    Login with Discord
+                </a>
+            </div>
+        </div>
+
+        <!-- Shopify Content (shown when logged in) -->
+        <div id="shopify-content" class="hidden">
+            <div class="card">
+                <h2 class="card-title">Product Lookup</h2>
+                <form id="lookup-form" class="lookup-form">
+                    <input type="url" id="product-url" placeholder="https://store.example.com/products/product-name" required>
+                    <button type="submit" id="lookup-btn">Lookup</button>
+                </form>
+                <div id="error-message" class="error-message"></div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading-card" class="card" style="display: none;">
+                <div class="loading-spinner">Fetching product data...</div>
+            </div>
+
+            <!-- Product Result -->
+            <div id="product-result" class="card product-result">
+                <div class="product-header">
+                    <img id="product-image" class="product-image" src="" alt="">
+                    <div class="product-info">
+                        <h2 id="product-title" class="product-title"></h2>
+                        <p id="product-vendor" class="product-vendor"></p>
+                        <span id="product-type" class="product-type"></span>
+                    </div>
+                </div>
+                <h3 class="variants-title">Variants</h3>
+                <div id="variants-grid" class="variants-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/main.js"></script>
+    <script src="/api.js?v=2"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await waitForAuth();
+        });
+
+        async function waitForAuth() {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const me = await packBotAPI.getMe();
+            if (me && me.authenticated) {
+                document.getElementById('not-logged-in').classList.add('hidden');
+                document.getElementById('shopify-content').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('lookup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const url = document.getElementById('product-url').value.trim();
+            const btn = document.getElementById('lookup-btn');
+            const errorEl = document.getElementById('error-message');
+            const loadingEl = document.getElementById('loading-card');
+            const resultEl = document.getElementById('product-result');
+
+            if (!url) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+            errorEl.classList.remove('show');
+            resultEl.classList.remove('show');
+            loadingEl.style.display = 'block';
+
+            try {
+                const response = await fetch('/api/shopify/lookup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to lookup product');
+                }
+
+                displayProduct(data);
+            } catch (error) {
+                errorEl.textContent = error.message;
+                errorEl.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Lookup';
+                loadingEl.style.display = 'none';
+            }
+        });
+
+        function displayProduct(product) {
+            const result = document.getElementById('product-result');
+
+            // Set product info
+            const imgEl = document.getElementById('product-image');
+            if (product.image) {
+                imgEl.src = product.image;
+                imgEl.style.display = 'block';
+            } else {
+                imgEl.style.display = 'none';
+            }
+
+            document.getElementById('product-title').textContent = product.title;
+            document.getElementById('product-vendor').textContent = product.vendor || 'Unknown Vendor';
+            document.getElementById('product-type').textContent = product.productType || 'Product';
+
+            // Build variants
+            const grid = document.getElementById('variants-grid');
+            grid.innerHTML = '';
+
+            product.variants.forEach(variant => {
+                const stockClass = variant.stock <= 0 ? 'oos' : variant.stock < 10 ? 'low' : '';
+                const stockText = variant.stock === null ? 'N/A' : variant.stock;
+
+                const card = document.createElement('div');
+                card.className = 'variant-card';
+                card.innerHTML = `
+                    <div class="variant-title">${escapeHtml(variant.title)}</div>
+                    <div class="variant-badges">
+                        <span class="badge badge-price">$${variant.price}</span>
+                        ${variant.compareAtPrice ? `<span class="badge" style="text-decoration: line-through; opacity: 0.5;">$${variant.compareAtPrice}</span>` : ''}
+                        <span class="badge badge-stock ${stockClass}">Stock: ${stockText}</span>
+                    </div>
+                    <div class="variant-actions">
+                        <a href="${variant.addToCart}" target="_blank" class="variant-btn primary">Add to Cart</a>
+                        <button class="variant-btn secondary copy-btn" data-url="${variant.addToCart}">Copy Link</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            // Add copy handlers
+            grid.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    navigator.clipboard.writeText(btn.dataset.url);
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => btn.textContent = 'Copy Link', 1500);
+                });
+            });
+
+            result.classList.add('show');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+
+</html>

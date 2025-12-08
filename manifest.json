@@ -1,0 +1,47 @@
+{
+    "name": "The Pack",
+    "short_name": "The Pack",
+    "description": "Discord music bot dashboard - control music, view stats, and manage your servers",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0c0c0c",
+    "theme_color": "#ff006a",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/img/pck-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/img/pck-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/img/pck-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "categories": ["entertainment", "music", "utilities"],
+    "shortcuts": [
+        {
+            "name": "Now Playing",
+            "short_name": "Playing",
+            "description": "See what's playing",
+            "url": "/nowplaying.html",
+            "icons": [{ "src": "/img/pck-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Dashboard",
+            "short_name": "Dashboard",
+            "description": "Server dashboard",
+            "url": "/dashboard.html",
+            "icons": [{ "src": "/img/pck-192.png", "sizes": "192x192" }]
+        }
+    ]
+}

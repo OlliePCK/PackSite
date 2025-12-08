@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listening History - The Pack</title>
+    <link rel="icon" type="image/svg+xml" href="/img/pck.svg?v=2">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ff006a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="The Pack">
+    <link rel="apple-touch-icon" href="/img/pck-192.png">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/nav.js" defer></script>
+    <style>
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-box-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .stat-box-label {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: background 0.2s;
+        }
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .history-thumbnail {
+            width: 50px;
+            height: 50px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: var(--bg-dark);
+        }
+        .history-info {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+        }
+        .history-title {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .history-meta {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .history-time {
+            color: var(--text-secondary);
+            font-size: 0.8em;
+            white-space: nowrap;
+        }
+        .top-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .top-rank {
+            width: 30px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .top-info {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+        }
+        .top-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .top-plays {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+        }
+        .section-title {
+            font-size: 1.1em;
+            margin: 20px 0 15px 0;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .user-link {
+            color: var(--primary);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .user-link:hover {
+            text-decoration: underline;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        .tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="neuro"></canvas>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">
+            <img src="/img/texture.svg" alt="Pack Logo" class="nav-logo-img">
+        </a>
+        <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+        <div class="nav-links" id="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            <a href="/nowplaying.html" class="nav-link">Now Playing</a>
+            <a href="/leaderboard.html" class="nav-link">Leaderboard</a>
+            <a href="/history.html" class="nav-link active">History</a>
+            <a href="/youtube.html" class="nav-link">YouTube</a>
+            <a href="/monitors.html" class="nav-link">Monitors</a>
+            <a href="/shopify.html" class="nav-link">Shopify</a>
+            <!-- Mobile-only items -->
+            <div class="mobile-nav-divider" id="mobile-divider"></div>
+            <div class="mobile-user-info" id="mobile-user-info">
+                <img class="user-avatar" id="mobile-user-avatar" alt="Avatar">
+                <span id="mobile-user-name"></span>
+            </div>
+            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings">⚙️ Settings</a>
+            <a href="#" class="mobile-nav-item" id="mobile-logout">🚪 Logout</a>
+            <a href="#" class="mobile-login-btn" id="mobile-login">Login with Discord</a>
+        </div>
+        <div class="nav-auth" id="nav-auth">
+            <a href="#" id="login-btn" class="nav-btn">Login with Discord</a>
+            <div id="user-info" class="user-info hidden">
+                <div class="user-info-toggle">
+                    <img id="user-avatar" class="user-avatar" alt="Avatar" crossorigin="anonymous">
+                    <span id="user-name"></span>
+                    <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <div class="user-dropdown">
+                    <div class="user-dropdown-inner">
+                        <a href="/settings.html" class="dropdown-item">
+                            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                            Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item" id="logout-btn">
+                            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="page-container">
+        <h1 class="page-title">🎵 Listening History</h1>
+        <p class="page-subtitle">Track what's been playing in your servers</p>
+
+        <!-- Not Logged In State -->
+        <div id="not-logged-in" class="card">
+            <div class="empty-state">
+                <div class="empty-state-icon">🔐</div>
+                <h3>Login Required</h3>
+                <p>Please login with Discord to view listening history</p>
+                <a href="#" onclick="packBotAPI.login(); return false;" class="nav-btn" style="display: inline-block; margin-top: 20px;">
+                    Login with Discord
+                </a>
+            </div>
+        </div>
+
+        <!-- History Content -->
+        <div id="history-content" class="hidden">
+            <!-- Guild Selector -->
+            <div class="card">
+                <h2 class="card-title">Select Server</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="guild-select" class="form-select" style="flex: 1; padding: 12px; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary);">
+                        <option value="">Loading servers...</option>
+                    </select>
+                    <button id="set-favorite-btn" style="padding: 10px 16px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">⭐ Set Favorite</button>
+                </div>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="card" id="stats-section" style="display: none;">
+                <h2 class="card-title">📊 Statistics</h2>
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="stat-tracks">0</div>
+                        <div class="stat-box-label">Tracks Played</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-value" id="stat-time">0h</div>
+                        <div class="stat-box-label">Listening Time</div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab active" data-tab="recent">Recent</button>
+                    <button class="tab" data-tab="top-tracks">Top Tracks</button>
+                    <button class="tab" data-tab="top-users">Top Users</button>
+                </div>
+
+                <!-- Recent History Tab -->
+                <div id="tab-recent" class="tab-content">
+                    <div id="history-list"></div>
+                    <div class="pagination">
+                        <button id="prev-page" disabled>← Previous</button>
+                        <span id="page-info">Page 1</span>
+                        <button id="next-page">Next →</button>
+                    </div>
+                </div>
+
+                <!-- Top Tracks Tab -->
+                <div id="tab-top-tracks" class="tab-content" style="display: none;">
+                    <div id="top-tracks-list"></div>
+                </div>
+
+                <!-- Top Users Tab -->
+                <div id="tab-top-users" class="tab-content" style="display: none;">
+                    <div id="top-users-list"></div>
+                </div>
+            </div>
+
+            <!-- No History State -->
+            <div id="no-history" class="card" style="display: none;">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎧</div>
+                    <h3>No Listening History</h3>
+                    <p>Start playing music in this server to see history here!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/main.js"></script>
+    <script src="/api.js?v=3"></script>
+    <script>
+        let currentGuildId = null;
+        let guildsData = null;
+        let favoriteGuildId = null;
+        let currentPage = 1;
+        let totalPages = 1;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await waitForAuth();
+        });
+
+        async function waitForAuth() {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const me = await packBotAPI.getMe();
+            if (me && me.authenticated) {
+                document.getElementById('not-logged-in').classList.add('hidden');
+                document.getElementById('history-content').classList.remove('hidden');
+                loadGuilds();
+            }
+        }
+
+        async function loadGuilds() {
+            try {
+                const [guildsRes, prefsRes] = await Promise.all([
+                    fetch('/api/guilds', { credentials: 'include' }),
+                    packBotAPI.getPreferences()
+                ]);
+                const data = await guildsRes.json();
+                guildsData = data;
+                favoriteGuildId = prefsRes?.favoriteGuildId || null;
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlGuildId = urlParams.get('guild');
+
+                if (!data.guilds || data.guilds.length === 0) {
+                    document.getElementById('guild-select').innerHTML = '<option value="">No servers available</option>';
+                    return;
+                }
+
+                const select = document.getElementById('guild-select');
+                select.innerHTML = '<option value="">Select a server...</option>';
+                
+                data.guilds.forEach(guild => {
+                    const option = document.createElement('option');
+                    option.value = guild.id;
+                    const isFavorite = guild.id === favoriteGuildId;
+                    option.textContent = (isFavorite ? '⭐ ' : '') + guild.name;
+                    select.appendChild(option);
+                });
+
+                // Priority: URL > favorite > none
+                if (urlGuildId && data.guilds.find(g => g.id === urlGuildId)) {
+                    currentGuildId = urlGuildId;
+                    select.value = urlGuildId;
+                    loadHistory();
+                } else if (favoriteGuildId && data.guilds.find(g => g.id === favoriteGuildId)) {
+                    currentGuildId = favoriteGuildId;
+                    select.value = favoriteGuildId;
+                    loadHistory();
+                }
+
+                select.addEventListener('change', (e) => {
+                    currentGuildId = e.target.value;
+                    currentPage = 1;
+                    if (currentGuildId) loadHistory();
+                });
+
+                // Tab switching
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+                        tab.classList.add('active');
+                        document.getElementById('tab-' + tab.dataset.tab).style.display = 'block';
+                    });
+                });
+
+                // Pagination
+                document.getElementById('prev-page').addEventListener('click', () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        loadHistory();
+                    }
+                });
+                document.getElementById('next-page').addEventListener('click', () => {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        loadHistory();
+                    }
+                });
+
+                // Favorite button
+                document.getElementById('set-favorite-btn').addEventListener('click', setFavoriteGuild);
+
+            } catch (error) {
+                console.error('Failed to load guilds:', error);
+            }
+        }
+
+        async function setFavoriteGuild() {
+            if (!currentGuildId) {
+                alert('Please select a server first');
+                return;
+            }
+            
+            const btn = document.getElementById('set-favorite-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Setting...';
+            
+            try {
+                const result = await packBotAPI.setFavoriteGuild(currentGuildId);
+                if (result?.success) {
+                    favoriteGuildId = currentGuildId;
+                    const select = document.getElementById('guild-select');
+                    Array.from(select.options).forEach(opt => {
+                        if (opt.value && guildsData?.guilds) {
+                            const guild = guildsData.guilds.find(g => g.id === opt.value);
+                            if (guild) {
+                                const isFavorite = opt.value === favoriteGuildId;
+                                opt.textContent = (isFavorite ? '⭐ ' : '') + guild.name;
+                            }
+                        }
+                    });
+                    btn.textContent = '✅ Saved!';
+                    setTimeout(() => { btn.textContent = '⭐ Set Favorite'; btn.disabled = false; }, 1500);
+                }
+            } catch (error) {
+                console.error('Failed to set favorite:', error);
+                btn.textContent = '❌ Failed';
+                setTimeout(() => { btn.textContent = '⭐ Set Favorite'; btn.disabled = false; }, 1500);
+            }
+        }
+
+        async function loadHistory() {
+            if (!currentGuildId) return;
+
+            try {
+                const [historyRes, statsRes] = await Promise.all([
+                    packBotAPI.getHistory(currentGuildId, currentPage, 25),
+                    packBotAPI.getHistoryStats(currentGuildId)
+                ]);
+
+                if (!historyRes?.history?.length && currentPage === 1) {
+                    document.getElementById('stats-section').style.display = 'none';
+                    document.getElementById('no-history').style.display = 'block';
+                    return;
+                }
+
+                document.getElementById('stats-section').style.display = 'block';
+                document.getElementById('no-history').style.display = 'none';
+
+                // Update stats
+                document.getElementById('stat-tracks').textContent = formatNumber(statsRes.totalTracks);
+                document.getElementById('stat-time').textContent = formatListeningTime(statsRes.totalListeningTime);
+
+                // Render recent history
+                totalPages = historyRes.pages;
+                document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages}`;
+                document.getElementById('prev-page').disabled = currentPage <= 1;
+                document.getElementById('next-page').disabled = currentPage >= totalPages;
+
+                const historyList = document.getElementById('history-list');
+                historyList.innerHTML = historyRes.history.map(item => `
+                    <div class="history-item">
+                        <img class="history-thumbnail" src="${item.thumbnail || '/img/pck.svg'}" alt="" onerror="this.src='/img/pck.svg'">
+                        <div class="history-info">
+                            <div class="history-title">${escapeHtml(item.title)}</div>
+                            <div class="history-meta">
+                                ${item.artist ? `<span>${escapeHtml(item.artist)}</span>` : ''}
+                                <span>by <a class="user-link" href="/profile.html?user=${item.requestedBy.id}&guild=${currentGuildId}">${escapeHtml(item.requestedBy.username)}</a></span>
+                                <span>${formatDuration(item.duration)}</span>
+                            </div>
+                        </div>
+                        <div class="history-time">${formatTimeAgo(item.playedAt)}</div>
+                    </div>
+                `).join('');
+
+                // Render top tracks
+                const topTracksList = document.getElementById('top-tracks-list');
+                topTracksList.innerHTML = statsRes.topTracks.map((track, i) => `
+                    <div class="top-item">
+                        <div class="top-rank">#${i + 1}</div>
+                        <div class="top-info">
+                            <div class="top-title">${escapeHtml(track.title)}</div>
+                            <div class="top-plays">${track.playCount} plays • ${formatListeningTime(track.totalDuration)}</div>
+                        </div>
+                    </div>
+                `).join('') || '<p style="color: var(--text-secondary);">No data yet</p>';
+
+                // Render top users
+                const topUsersList = document.getElementById('top-users-list');
+                topUsersList.innerHTML = statsRes.topUsers.map((user, i) => `
+                    <div class="top-item">
+                        <div class="top-rank">#${i + 1}</div>
+                        <div class="top-info">
+                            <div class="top-title"><a class="user-link" href="/profile.html?user=${user.odUserId}&guild=${currentGuildId}">${escapeHtml(user.username)}</a></div>
+                            <div class="top-plays">${user.playCount} tracks • ${formatListeningTime(user.totalDuration)}</div>
+                        </div>
+                    </div>
+                `).join('') || '<p style="color: var(--text-secondary);">No data yet</p>';
+
+            } catch (error) {
+                console.error('Failed to load history:', error);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        function formatNumber(num) {
+            if (!num) return '0';
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatListeningTime(seconds) {
+            if (!seconds) return '0m';
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            if (hours > 0) return `${hours}h ${mins}m`;
+            return `${mins}m`;
+        }
+
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = (now - date) / 1000;
+            
+            if (diff < 60) return 'Just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+            return date.toLocaleDateString();
+        }
+    </script>
+</body>
+</html>

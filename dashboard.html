@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - The Pack</title>
+    <link rel="icon" type="image/svg+xml" href="/img/pck.svg?v=2">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ff006a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="The Pack">
+    <link rel="apple-touch-icon" href="/img/pck-192.png">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/nav.js" defer></script>
+</head>
+
+<body>
+    <canvas id="neuro"></canvas>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">
+            <img src="/img/texture.svg" alt="Pack Logo" class="nav-logo-img">
+        </a>
+        <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+        <div class="nav-links" id="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/dashboard.html" class="nav-link active">Dashboard</a>
+            <a href="/nowplaying.html" class="nav-link">Now Playing</a>
+            <a href="/leaderboard.html" class="nav-link">Leaderboard</a>
+            <a href="/history.html" class="nav-link">History</a>
+            <a href="/youtube.html" class="nav-link">YouTube</a>
+            <a href="/monitors.html" class="nav-link">Monitors</a>
+            <a href="/shopify.html" class="nav-link">Shopify</a>
+            <!-- Mobile-only items -->
+            <div class="mobile-nav-divider" id="mobile-divider"></div>
+            <div class="mobile-user-info" id="mobile-user-info">
+                <img class="user-avatar" id="mobile-user-avatar" alt="Avatar">
+                <span id="mobile-user-name"></span>
+            </div>
+            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings">⚙️ Settings</a>
+            <a href="#" class="mobile-nav-item" id="mobile-logout">🚪 Logout</a>
+            <a href="#" class="mobile-login-btn" id="mobile-login">Login with Discord</a>
+        </div>
+        <div class="nav-auth" id="nav-auth">
+            <a href="#" id="login-btn" class="nav-btn">Login with Discord</a>
+            <div id="user-info" class="user-info hidden">
+                <div class="user-info-toggle">
+                    <img id="user-avatar" class="user-avatar" alt="Avatar" crossorigin="anonymous">
+                    <span id="user-name"></span>
+                    <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <div class="user-dropdown">
+                    <div class="user-dropdown-inner">
+                        <a href="/settings.html" class="dropdown-item">
+                            <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                            Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" id="logout-btn" class="dropdown-item" onclick="packBotAPI.logout()">
+                            <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14l5-5-5-5m5 5H9"/></svg>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <h1 class="page-title">📊 Dashboard</h1>
+        <p class="page-subtitle">Manage your PackBot settings and saved playlists</p>
+        
+        <!-- Not Logged In State -->
+        <div id="not-logged-in" class="card">
+            <div class="empty-state">
+                <div class="empty-state-icon">🔐</div>
+                <h3>Login Required</h3>
+                <p>Please login with Discord to access your dashboard</p>
+                <a href="#" onclick="packBotAPI.login(); return false;" class="nav-btn" style="display: inline-block; margin-top: 20px;">
+                    Login with Discord
+                </a>
+            </div>
+        </div>
+
+        <!-- Dashboard Content (shown when logged in) -->
+        <div id="dashboard-content" class="hidden">
+            <div class="dashboard-grid">
+                <!-- Your Servers -->
+                <div class="dashboard-card">
+                    <h3>🏠 Your Servers</h3>
+                    <div id="guild-list" class="guild-list">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Your Playlists -->
+                <div class="dashboard-card">
+                    <h3>🎵 Saved Playlists</h3>
+                    <div id="playlist-container">
+                        <div id="playlist-list" class="playlist-list"></div>
+                        <div id="playlist-empty" class="empty-state hidden">
+                            <p>No saved playlists</p>
+                            <p style="font-size: 0.9em;">Use <code>/playlist save</code> in Discord to save playlists!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="dashboard-card">
+                    <h3>⚡ Quick Links</h3>
+                    <div class="guild-list">
+                        <a href="/nowplaying.html" class="guild-item" style="text-decoration: none; color: inherit;">
+                            <span style="font-size: 1.5em;">🎵</span>
+                            <div class="guild-info">
+                                <div class="guild-name">Now Playing</div>
+                                <div class="guild-role">View current music</div>
+                            </div>
+                        </a>
+                        <a href="/leaderboard.html" class="guild-item" style="text-decoration: none; color: inherit;">
+                            <span style="font-size: 1.5em;">🏆</span>
+                            <div class="guild-info">
+                                <div class="guild-name">Leaderboard</div>
+                                <div class="guild-role">Gaming stats</div>
+                            </div>
+                        </a>
+                        <a href="https://discord.com/oauth2/authorize?client_id=788541157151866881&permissions=8&scope=bot%20applications.commands" target="_blank" class="guild-item" style="text-decoration: none; color: inherit;">
+                            <span style="font-size: 1.5em;">➕</span>
+                            <div class="guild-info">
+                                <div class="guild-name">Add PackBot</div>
+                                <div class="guild-role">Invite to a new server</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Bot Status -->
+                <div class="dashboard-card">
+                    <h3>🤖 Bot Status</h3>
+                    <div id="bot-status-container">
+                        <div class="loading" id="status-loading">
+                            <div class="spinner"></div>
+                        </div>
+                        <div id="status-content" class="hidden">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                                <span class="status-dot" id="bot-status-dot"></span>
+                                <span id="bot-status-text">Checking...</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <div style="color: var(--text-secondary); font-size: 0.85em;">Servers</div>
+                                    <div style="font-size: 1.5em; font-weight: bold;" id="status-guilds">--</div>
+                                </div>
+                                <div>
+                                    <div style="color: var(--text-secondary); font-size: 0.85em;">Active Voice</div>
+                                    <div style="font-size: 1.5em; font-weight: bold;" id="status-voice">--</div>
+                                </div>
+                                <div>
+                                    <div style="color: var(--text-secondary); font-size: 0.85em;">Uptime</div>
+                                    <div style="font-size: 1.5em; font-weight: bold;" id="status-uptime">--</div>
+                                </div>
+                                <div>
+                                    <div style="color: var(--text-secondary); font-size: 0.85em;">Ping</div>
+                                    <div style="font-size: 1.5em; font-weight: bold;" id="status-ping">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="x-shader/x-fragment" id="vertShader">
+        precision mediump float;
+        varying vec2 vUv;
+        attribute vec2 a_position;
+
+        void main() {
+            vUv = .5 * (a_position + 1.);
+            gl_Position = vec4(a_position, 0.0, 1.0);
+        }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragShader">
+        precision mediump float;
+    
+        varying vec2 vUv;
+        uniform float u_time;
+        uniform float u_ratio;
+        uniform vec2 u_pointer_position;
+        uniform float u_scroll_progress;
+    
+        vec2 rotate(vec2 uv, float th) {
+            return mat2(cos(th), sin(th), -sin(th), cos(th)) * uv;
+        }
+    
+        float neuro_shape(vec2 uv, float t, float p) {
+            vec2 sine_acc = vec2(0.);
+            vec2 res = vec2(0.);
+            float scale = 8.;
+    
+            for (int j = 0; j < 15; j++) {
+                uv = rotate(uv, 1.);
+                sine_acc = rotate(sine_acc, 1.);
+                vec2 layer = uv * scale + float(j) + sine_acc - t;
+                sine_acc += sin(layer);
+                res += (.5 + .5 * cos(layer)) / scale;
+                scale *= (1.2 - .07 * p);
+            }
+            return res.x + res.y;
+        }
+    
+        void main() {
+            vec2 uv = .5 * vUv;
+            uv.x *= u_ratio;
+    
+            vec2 pointer = vUv - u_pointer_position;
+            pointer.x *= u_ratio;
+            float p = clamp(length(pointer), 0., 1.);
+            p = .5 * pow(1. - p, 2.);
+    
+            float t = .001 * u_time;
+    
+            float noise = neuro_shape(uv, t, p);
+    
+            noise = 1.2 * pow(noise, 3.);
+            noise += pow(noise, 10.);
+            noise = max(.0, noise - .5);
+            noise *= (1. - length(vUv - .5));
+
+            vec3 color = vec3(0.071,0.0,0.029);
+
+            color = color * noise;            gl_FragColor = vec4(color, noise);
+        }
+    </script>
+
+    <script type="module" src="/main.js"></script>
+    <script src="/api.js?v=2"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check if logged in
+            const me = await packBotAPI.getMe();
+            
+            if (me && me.authenticated) {
+                // Update UI with user info
+                document.getElementById('login-btn').classList.add('hidden');
+                document.getElementById('user-info').classList.remove('hidden');
+                document.getElementById('user-name').textContent = me.username;
+                if (me.avatar) {
+                    document.getElementById('user-avatar').src = me.avatar;
+                }
+                
+                showDashboard(me);
+            } else {
+                // Redirect to login
+                window.location.href = '/api/auth/discord';
+            }
+        });
+
+        function showLoginRequired() {
+            document.getElementById('not-logged-in').classList.remove('hidden');
+            document.getElementById('dashboard-content').classList.add('hidden');
+        }
+
+        async function showDashboard(user) {
+            document.getElementById('not-logged-in').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.remove('hidden');
+
+            // Load guilds dynamically from API
+            await loadGuilds();
+
+            // Load playlists
+            loadPlaylists();
+
+            // Load bot status
+            loadBotStatus();
+        }
+        
+        async function loadGuilds() {
+            const guildList = document.getElementById('guild-list');
+            
+            try {
+                const response = await fetch('/api/guilds');
+                
+                if (response.status === 401) {
+                    window.location.href = '/api/auth/discord';
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.guilds && data.guilds.length > 0) {
+                    renderGuilds(data.guilds);
+                } else {
+                    guildList.innerHTML = `
+                        <div class="empty-state">
+                            <p>No mutual servers found</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load guilds:', error);
+                guildList.innerHTML = `
+                    <div class="empty-state">
+                        <p>Failed to load servers</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderGuilds(guilds) {
+            const guildList = document.getElementById('guild-list');
+            
+            if (!guilds || guilds.length === 0) {
+                guildList.innerHTML = `
+                    <div class="empty-state">
+                        <p>No shared servers found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            guildList.innerHTML = guilds.map(guild => {
+                const iconUrl = guild.icon || '/img/default-server.png';
+                
+                return `
+                    <div class="guild-item" onclick="selectGuild('${guild.id}')">
+                        <img class="guild-icon" src="${iconUrl}" alt="${escapeHtml(guild.name)}" onerror="this.onerror=null; this.src='/img/default-server.png'">
+                        <div class="guild-info">
+                            <div class="guild-name">${escapeHtml(guild.name)}</div>
+                            <div class="guild-role">${guild.isAdmin ? '👑 Admin' : 'Member'}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadPlaylists() {
+            const data = await packBotAPI.getPlaylists();
+            const playlistList = document.getElementById('playlist-list');
+            const playlistEmpty = document.getElementById('playlist-empty');
+
+            if (!data || !data.playlists || data.playlists.length === 0) {
+                playlistList.classList.add('hidden');
+                playlistEmpty.classList.remove('hidden');
+                return;
+            }
+
+            playlistList.classList.remove('hidden');
+            playlistEmpty.classList.add('hidden');
+
+            playlistList.innerHTML = data.playlists.map(playlist => {
+                const platformIcon = getPlatformIcon(playlist.platform);
+                
+                return `
+                    <div class="playlist-item">
+                        <div class="playlist-info">
+                            <span class="platform-icon">${platformIcon}</span>
+                            <div>
+                                <div class="playlist-name">${escapeHtml(playlist.name)}</div>
+                                <div style="font-size: 0.85em; color: var(--text-secondary);">${playlist.platform}</div>
+                            </div>
+                        </div>
+                        <button class="delete-btn" onclick="deletePlaylist(${playlist.id})" title="Delete">🗑️</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadBotStatus() {
+            const stats = await packBotAPI.getStats();
+            
+            document.getElementById('status-loading').classList.add('hidden');
+            document.getElementById('status-content').classList.remove('hidden');
+
+            if (!stats) {
+                document.getElementById('bot-status-text').textContent = 'Offline';
+                document.getElementById('bot-status-dot').classList.add('offline');
+                return;
+            }
+
+            document.getElementById('bot-status-text').textContent = 'Online';
+            document.getElementById('bot-status-dot').classList.add('online');
+            document.getElementById('status-guilds').textContent = stats.guilds;
+            document.getElementById('status-voice').textContent = stats.activeVoice;
+            document.getElementById('status-uptime').textContent = stats.uptimeFormatted;
+            document.getElementById('status-ping').textContent = `${stats.ping}ms`;
+        }
+
+        function getPlatformIcon(platform) {
+            switch (platform) {
+                case 'spotify': return '💚';
+                case 'youtube': return '🔴';
+                case 'soundcloud': return '🧡';
+                default: return '🎵';
+            }
+        }
+
+        async function deletePlaylist(id) {
+            if (!confirm('Are you sure you want to delete this playlist?')) return;
+            
+            const result = await packBotAPI.deletePlaylist(id);
+            if (result && result.success) {
+                loadPlaylists();
+            } else {
+                alert('Failed to delete playlist');
+            }
+        }
+
+        function selectGuild(guildId) {
+            // Navigate to now playing for this guild
+            window.location.href = `/nowplaying.html?guild=${guildId}`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+
+</html>
