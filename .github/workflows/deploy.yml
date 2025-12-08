@@ -20,7 +20,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SERVER_PORT || 22 }}
+          port: ${{ secrets.SERVER_PORT || '22' }}
           source: "*.html,*.js,*.css,*.json,img/*,dist/*,manifest.json,sw.js"
           target: "/mnt/user/appdata/binhex-nginx/nginx/html/the-pack/"
           overwrite: true
