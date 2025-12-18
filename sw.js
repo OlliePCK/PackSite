@@ -1,124 +1,87 @@
 /**
- * The Pack - Service Worker
- * Provides offline support and caching for PWA
+ * The Pack - Service Worker (v2)
+ *
+ * This site is built by Vite and uses hashed assets under /assets/.
+ * The old SW (v1) precached legacy paths (/main.js, /nav.js, /styles.css, /the-pack/*)
+ * and could serve stale HTML that referenced removed assets.
+ *
+ * Strategy:
+ * - Navigations (HTML): network-first, fallback to cached /index.html
+ * - Hashed assets (/assets/*): cache-first
+ * - Never cache HTML responses as assets
  */
 
-const CACHE_NAME = 'the-pack-v1';
-const STATIC_ASSETS = [
-    '/',
-    '/index.html',
-    '/dashboard.html',
-    '/nowplaying.html',
-    '/leaderboard.html',
-    '/history.html',
-    '/youtube.html',
-    '/monitors.html',
-    '/shopify.html',
-    '/settings.html',
-    '/profile.html',
-    '/styles.css',
-    '/main.js',
-    '/nav.js',
-    '/api.js',
-    '/img/pck.svg',
-    '/img/texture.svg',
-    '/manifest.json'
-];
+const CACHE_VERSION = 'v2';
+const HTML_CACHE = `the-pack-html-${CACHE_VERSION}`;
+const ASSET_CACHE = `the-pack-assets-${CACHE_VERSION}`;
 
-// Install event - cache static assets
 self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('[SW] Caching static assets');
-                return cache.addAll(STATIC_ASSETS);
-            })
-            .then(() => self.skipWaiting())
-    );
+    // Activate ASAP; we don't precache to avoid locking in old paths.
+    event.waitUntil(self.skipWaiting());
 });
 
-// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys()
-            .then((cacheNames) => {
-                return Promise.all(
-                    cacheNames
-                        .filter((name) => name !== CACHE_NAME)
-                        .map((name) => caches.delete(name))
-                );
-            })
-            .then(() => self.clients.claim())
+        (async () => {
+            const keys = await caches.keys();
+            await Promise.all(
+                keys
+                    .filter((k) => ![HTML_CACHE, ASSET_CACHE].includes(k))
+                    .map((k) => caches.delete(k))
+            );
+            await self.clients.claim();
+        })()
     );
 });
 
-// Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Skip non-GET requests
     if (request.method !== 'GET') return;
 
-    // Skip API requests - always go to network
-    if (url.pathname.startsWith('/api/')) {
-        return;
-    }
+    // Never intercept API or websockets
+    if (url.pathname.startsWith('/api') || url.pathname.startsWith('/socket.io')) return;
 
-    // Skip socket.io requests
-    if (url.pathname.startsWith('/socket.io/')) {
-        return;
-    }
-
-    // For navigation requests, try network first, fallback to cache
-    if (request.mode === 'navigate') {
+    // HTML navigations: network-first
+    if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
         event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    // Cache successful responses
-                    if (response.ok) {
-                        const responseClone = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(request, responseClone);
-                        });
+            (async () => {
+                try {
+                    const fresh = await fetch(request);
+                    if (fresh && fresh.ok) {
+                        const cache = await caches.open(HTML_CACHE);
+                        cache.put('/index.html', fresh.clone());
                     }
-                    return response;
-                })
-                .catch(() => {
-                    return caches.match(request) || caches.match('/index.html');
-                })
+                    return fresh;
+                } catch {
+                    const cache = await caches.open(HTML_CACHE);
+                    return (await cache.match('/index.html')) || Response.error();
+                }
+            })()
         );
         return;
     }
 
-    // For static assets, try cache first, fallback to network
-    event.respondWith(
-        caches.match(request)
-            .then((cachedResponse) => {
-                if (cachedResponse) {
-                    // Return cached version and update cache in background
-                    fetch(request).then((response) => {
-                        if (response.ok) {
-                            caches.open(CACHE_NAME).then((cache) => {
-                                cache.put(request, response);
-                            });
-                        }
-                    });
-                    return cachedResponse;
-                }
+    // Hashed Vite assets: cache-first
+    if (url.pathname.startsWith('/assets/')) {
+        event.respondWith(
+            (async () => {
+                const cache = await caches.open(ASSET_CACHE);
+                const cached = await cache.match(request);
+                if (cached) return cached;
 
-                // Not in cache, fetch from network
-                return fetch(request).then((response) => {
-                    if (response.ok) {
-                        const responseClone = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(request, responseClone);
-                        });
-                    }
-                    return response;
-                });
-            })
-    );
+                const resp = await fetch(request);
+                // Avoid caching HTML fallbacks masquerading as assets
+                const contentType = resp.headers.get('content-type') || '';
+                if (resp.ok && !contentType.includes('text/html')) {
+                    cache.put(request, resp.clone());
+                }
+                return resp;
+            })()
+        );
+        return;
+    }
 });
 
 // Handle push notifications (for future use)

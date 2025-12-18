@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Settings - The Pack</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/pck-Dq2nWAiH.svg?v=2">
+    <link rel="manifest" href="/assets/manifest-3cRaziHB.json">
+    <meta name="theme-color" content="#00a0da">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="The Pack">
+    <link rel="apple-touch-icon" href="/assets/pck-192-C6HHcf5i.png">
+
+    <style>
+        /* Page-specific styles */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .setting-item {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .setting-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-description {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+        }
+
+        .setting-select {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .setting-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Toggle switch */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border-color);
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle input:checked + .toggle-slider {
+            background-color: var(--primary);
+        }
+
+        .toggle input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        .toggle-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Save button */
+        .save-section {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .btn-save {
+            padding: 14px 40px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: filter 0.2s, transform 0.2s;
+        }
+
+        .btn-save:hover {
+            filter: brightness(1.1);
+            transform: scale(1.02);
+        }
+
+        .btn-save:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+            display: block;
+        }
+
+        .status-message.error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            display: block;
+        }
+    </style>
+  <script type="module" crossorigin src="/assets/main-Clcqw10a.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/main-CIuxP9Vf.css">
+</head>
+
+<body>
+    <canvas id="neuro"></canvas>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">
+            <img src="/assets/texture-xISCEeQ5.svg" alt="Pack Logo" class="nav-logo-img">
+        </a>
+        <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+        <div class="nav-links" id="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            <a href="/nowplaying.html" class="nav-link">Now Playing</a>
+            <a href="/leaderboard.html" class="nav-link">Leaderboard</a>
+            <a href="/history.html" class="nav-link">History</a>
+            <a href="/youtube.html" class="nav-link">YouTube</a>
+            <a href="/monitors.html" class="nav-link">Monitors</a>
+            <a href="/shopify.html" class="nav-link">Shopify</a>
+            <!-- Mobile-only items -->
+            <div class="mobile-nav-divider" id="mobile-divider"></div>
+            <div class="mobile-user-info" id="mobile-user-info">
+                <img class="user-avatar" id="mobile-user-avatar" alt="Avatar">
+                <span id="mobile-user-name"></span>
+            </div>
+            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings">⚙️ Settings</a>
+            <a href="#" class="mobile-nav-item" id="mobile-logout">🚪 Logout</a>
+            <a href="#" class="mobile-login-btn" id="mobile-login">Login with Discord</a>
+        </div>
+        <div class="nav-auth" id="nav-auth">
+            <a href="#" id="login-btn" class="nav-btn">Login with Discord</a>
+            <div id="user-info" class="user-info hidden">
+                <div class="user-info-toggle">
+                    <img id="user-avatar" class="user-avatar" alt="Avatar" crossorigin="anonymous">
+                    <span id="user-name"></span>
+                    <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <div class="user-dropdown">
+                    <div class="user-dropdown-inner">
+                        <a href="/settings.html" class="dropdown-item">
+                            <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                            Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" id="logout-btn" class="dropdown-item" onclick="packBotAPI.logout()">
+                            <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14l5-5-5-5m5 5H9"/></svg>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <h1 class="page-title">⚙️ Server Settings</h1>
+        <p class="page-subtitle">Configure PackBot settings for your server</p>
+        
+        <!-- Not Logged In State -->
+        <div id="not-logged-in" class="card">
+            <div class="empty-state">
+                <div class="empty-state-icon">🔐</div>
+                <h3>Login Required</h3>
+                <p>Please login with Discord to manage server settings</p>
+                <a href="#" onclick="packBotAPI.login(); return false;" class="nav-btn" style="display: inline-block; margin-top: 20px;">
+                    Login with Discord
+                </a>
+            </div>
+        </div>
+
+        <!-- Settings Content (shown when logged in) -->
+        <div id="settings-content" class="hidden">
+            <!-- Guild Selector -->
+            <div class="card">
+                <h2 class="card-title">Select Server</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="guild-select" class="setting-select" style="flex: 1;">
+                        <option value="">Loading servers...</option>
+                    </select>
+                    <button id="set-favorite-btn" class="btn-save" style="padding: 10px 16px; white-space: nowrap;" title="Set as default server">⭐ Set Favorite</button>
+                </div>
+            </div>
+
+            <!-- Admin Required Notice -->
+            <div id="admin-notice" class="card" style="display: none;">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔒</div>
+                    <h3>Admin Required</h3>
+                    <p>You need to be a server administrator to change these settings. Current settings are shown below in read-only mode.</p>
+                </div>
+            </div>
+
+            <!-- Settings Form -->
+            <div id="settings-form" style="display: none;">
+                <div class="settings-grid">
+                    <!-- Live Role -->
+                    <div class="setting-item">
+                        <div class="setting-label">🎭 Live Role</div>
+                        <div class="setting-description">Role to assign when a member goes live on Twitch</div>
+                        <select id="setting-liveRole" class="setting-select" data-setting="liveRole">
+                            <option value="">None</option>
+                        </select>
+                    </div>
+
+                    <!-- Live Channel -->
+                    <div class="setting-item">
+                        <div class="setting-label">📺 Live Notifications Channel</div>
+                        <div class="setting-description">Channel to post live stream notifications</div>
+                        <select id="setting-liveChannel" class="setting-select" data-setting="liveChannel">
+                            <option value="">None</option>
+                        </select>
+                    </div>
+
+                    <!-- General Channel -->
+                    <div class="setting-item">
+                        <div class="setting-label">💬 General Channel</div>
+                        <div class="setting-description">Default channel for bot announcements</div>
+                        <select id="setting-generalChannel" class="setting-select" data-setting="generalChannel">
+                            <option value="">None</option>
+                        </select>
+                    </div>
+
+                    <!-- YouTube Channel -->
+                    <div class="setting-item">
+                        <div class="setting-label">🔴 YouTube Notifications Channel</div>
+                        <div class="setting-description">Channel to post YouTube upload notifications</div>
+                        <select id="setting-youtubeChannel" class="setting-select" data-setting="youtubeChannel">
+                            <option value="">None</option>
+                        </select>
+                    </div>
+
+                    <!-- 24/7 Mode -->
+                    <div class="setting-item">
+                        <div class="setting-label">🎵 24/7 Mode</div>
+                        <div class="setting-description">Keep the bot in voice channel even when idle</div>
+                        <div class="toggle-container">
+                            <label class="toggle">
+                                <input type="checkbox" id="setting-247" data-setting="twentyFourSevenMode">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label" id="247-label">Disabled</span>
+                        </div>
+                    </div>
+
+                    <!-- Voice Commands Auto-Enable (only for whitelisted guilds) -->
+                    <div class="setting-item" id="voice-setting-item" style="display: none;">
+                        <div class="setting-label">🎤 Voice Commands Auto-Enable</div>
+                        <div class="setting-description">Automatically enable voice commands when bot joins voice channel</div>
+                        <div class="toggle-container">
+                            <label class="toggle">
+                                <input type="checkbox" id="setting-voice" data-setting="voiceCommandsEnabled">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label" id="voice-label">Disabled</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Save Button -->
+                <div class="save-section">
+                    <button id="save-btn" class="btn-save">Save Settings</button>
+                    <div id="status-message" class="status-message"></div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="settings-loading" class="card" style="display: none;">
+                <div class="loading-spinner">Loading settings...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/api.js?v=2"></script>
+    <script>
+        let currentGuildId = null;
+        let pendingChanges = {};
+        let guildsData = null;
+        let isCurrentGuildAdmin = false;
+        let favoriteGuildId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await waitForAuth();
+        });
+
+        async function waitForAuth() {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const me = await packBotAPI.getMe();
+            if (me && me.authenticated) {
+                document.getElementById('not-logged-in').classList.add('hidden');
+                document.getElementById('settings-content').classList.remove('hidden');
+                loadGuilds();
+            }
+        }
+
+        async function loadGuilds() {
+            try {
+                // Load guilds and preferences in parallel
+                const [guildsRes, prefsRes] = await Promise.all([
+                    fetch('/api/guilds', { credentials: 'include' }),
+                    packBotAPI.getPreferences()
+                ]);
+                const data = await guildsRes.json();
+                guildsData = data;
+                favoriteGuildId = prefsRes?.favoriteGuildId || null;
+                
+                if (!data.guilds || data.guilds.length === 0) {
+                    document.getElementById('guild-select').innerHTML = '<option value="">No servers available</option>';
+                    return;
+                }
+
+                const select = document.getElementById('guild-select');
+                select.innerHTML = '<option value="">Select a server...</option>';
+                
+                data.guilds.forEach(guild => {
+                    const option = document.createElement('option');
+                    option.value = guild.id;
+                    const isFavorite = guild.id === favoriteGuildId;
+                    option.textContent = (isFavorite ? '⭐ ' : '') + guild.name + (guild.isAdmin ? ' ⚙️' : '');
+                    option.dataset.isAdmin = guild.isAdmin;
+                    select.appendChild(option);
+                });
+
+                select.addEventListener('change', () => {
+                    if (select.value) {
+                        currentGuildId = select.value;
+                        const selectedGuild = guildsData.guilds.find(g => g.id === currentGuildId);
+                        isCurrentGuildAdmin = selectedGuild?.isAdmin || guildsData.isSuperAdmin || false;
+                        loadSettings();
+                    } else {
+                        document.getElementById('settings-form').style.display = 'none';
+                        document.getElementById('admin-notice').style.display = 'none';
+                    }
+                });
+
+                // Auto-select favorite guild if set
+                if (favoriteGuildId && data.guilds.find(g => g.id === favoriteGuildId)) {
+                    select.value = favoriteGuildId;
+                    select.dispatchEvent(new Event('change'));
+                }
+            } catch (error) {
+                console.error('Failed to load guilds:', error);
+            }
+        }
+
+        // Set favorite guild
+        document.getElementById('set-favorite-btn').addEventListener('click', async () => {
+            if (!currentGuildId) {
+                alert('Please select a server first');
+                return;
+            }
+            
+            const btn = document.getElementById('set-favorite-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Setting...';
+            
+            try {
+                const result = await packBotAPI.setFavoriteGuild(currentGuildId);
+                if (result?.success) {
+                    favoriteGuildId = currentGuildId;
+                    // Update dropdown to show star
+                    const select = document.getElementById('guild-select');
+                    Array.from(select.options).forEach(opt => {
+                        if (opt.value) {
+                            const guild = guildsData.guilds.find(g => g.id === opt.value);
+                            const isFavorite = opt.value === favoriteGuildId;
+                            opt.textContent = (isFavorite ? '⭐ ' : '') + guild.name + (guild.isAdmin ? ' ⚙️' : '');
+                        }
+                    });
+                    btn.textContent = '✅ Saved!';
+                    setTimeout(() => { btn.textContent = '⭐ Set Favorite'; btn.disabled = false; }, 1500);
+                }
+            } catch (error) {
+                console.error('Failed to set favorite:', error);
+                btn.textContent = '❌ Failed';
+                setTimeout(() => { btn.textContent = '⭐ Set Favorite'; btn.disabled = false; }, 1500);
+            }
+        });
+
+        async function loadSettings() {
+            if (!currentGuildId) return;
+
+            const form = document.getElementById('settings-form');
+            const loading = document.getElementById('settings-loading');
+            const adminNotice = document.getElementById('admin-notice');
+            const saveBtn = document.getElementById('save-btn');
+
+            form.style.display = 'none';
+            adminNotice.style.display = 'none';
+            loading.style.display = 'block';
+
+            try {
+                // Load settings (includes channels and roles)
+                const settingsRes = await fetch(`/api/settings/${currentGuildId}`, { credentials: 'include' });
+                const settings = await settingsRes.json();
+                
+                console.log('Settings loaded:', settings, 'isAdmin:', isCurrentGuildAdmin);
+
+                // Populate channel dropdowns
+                const channelSelects = ['setting-liveChannel', 'setting-generalChannel', 'setting-youtubeChannel'];
+                channelSelects.forEach(id => {
+                    const select = document.getElementById(id);
+                    select.innerHTML = '<option value="">None</option>';
+                    if (settings.availableChannels) {
+                        settings.availableChannels.forEach(ch => {
+                            const option = document.createElement('option');
+                            option.value = ch.id;
+                            option.textContent = `#${ch.name}`;
+                            select.appendChild(option);
+                        });
+                    }
+                });
+
+                // Populate role dropdown
+                const roleSelect = document.getElementById('setting-liveRole');
+                roleSelect.innerHTML = '<option value="">None</option>';
+                if (settings.availableRoles) {
+                    settings.availableRoles.forEach(role => {
+                        const option = document.createElement('option');
+                        option.value = role.id;
+                        option.textContent = `@${role.name}`;
+                        roleSelect.appendChild(option);
+                    });
+                }
+
+                // Set current values
+                document.getElementById('setting-liveRole').value = settings.liveRole?.id || '';
+                document.getElementById('setting-liveChannel').value = settings.liveChannel?.id || '';
+                document.getElementById('setting-generalChannel').value = settings.generalChannel?.id || '';
+                document.getElementById('setting-youtubeChannel').value = settings.youtubeChannel?.id || '';
+                
+                const toggle247 = document.getElementById('setting-247');
+                toggle247.checked = settings.twentyFourSevenMode === true;
+                update247Label();
+
+                // Show voice commands setting only for whitelisted guilds
+                const voiceSettingItem = document.getElementById('voice-setting-item');
+                if (settings.isVoiceWhitelisted) {
+                    voiceSettingItem.style.display = 'block';
+                    const toggleVoice = document.getElementById('setting-voice');
+                    toggleVoice.checked = settings.voiceCommandsEnabled === true;
+                    updateVoiceLabel();
+                } else {
+                    voiceSettingItem.style.display = 'none';
+                }
+
+                // Handle admin vs non-admin view
+                const allSelects = document.querySelectorAll('#settings-form select[data-setting]');
+                const allToggles = document.querySelectorAll('#settings-form input[type="checkbox"][data-setting]');
+                
+                if (isCurrentGuildAdmin) {
+                    adminNotice.style.display = 'none';
+                    saveBtn.style.display = 'block';
+                    // Enable all controls
+                    allSelects.forEach(s => s.disabled = false);
+                    allToggles.forEach(t => t.disabled = false);
+                } else {
+                    adminNotice.style.display = 'block';
+                    saveBtn.style.display = 'none';
+                    // Disable all controls for read-only view
+                    allSelects.forEach(s => s.disabled = true);
+                    allToggles.forEach(t => t.disabled = true);
+                }
+
+                loading.style.display = 'none';
+                form.style.display = 'block';
+                pendingChanges = {};
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+                loading.style.display = 'none';
+            }
+        }
+
+        // Track changes
+        document.querySelectorAll('[data-setting]').forEach(el => {
+            el.addEventListener('change', () => {
+                const setting = el.dataset.setting;
+                let value = el.type === 'checkbox' ? el.checked : el.value;
+                pendingChanges[setting] = value;
+                
+                if (setting === 'twentyFourSevenMode') {
+                    update247Label();
+                }
+                if (setting === 'voiceCommandsEnabled') {
+                    updateVoiceLabel();
+                }
+            });
+        });
+
+        function update247Label() {
+            const toggle = document.getElementById('setting-247');
+            document.getElementById('247-label').textContent = toggle.checked ? 'Enabled' : 'Disabled';
+        }
+
+        function updateVoiceLabel() {
+            const toggle = document.getElementById('setting-voice');
+            document.getElementById('voice-label').textContent = toggle.checked ? 'Enabled' : 'Disabled';
+        }
+
+        // Save settings
+        document.getElementById('save-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('save-btn');
+            const statusEl = document.getElementById('status-message');
+
+            if (Object.keys(pendingChanges).length === 0) {
+                statusEl.textContent = 'No changes to save';
+                statusEl.className = 'status-message error';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            statusEl.className = 'status-message';
+
+            try {
+                // Save each setting individually
+                for (const [setting, value] of Object.entries(pendingChanges)) {
+                    const response = await fetch(`/api/settings/${currentGuildId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ setting, value })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || `Failed to save ${setting}`);
+                    }
+                }
+
+                statusEl.textContent = 'Settings saved successfully!';
+                statusEl.className = 'status-message success';
+                pendingChanges = {};
+            } catch (error) {
+                statusEl.textContent = error.message;
+                statusEl.className = 'status-message error';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Settings';
+            }
+        });
+    </script>
+</body>
+
+</html>

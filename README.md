@@ -4,14 +4,14 @@ Frontend website for The Pack Discord music bot.
 
 ## Features
 
-- 🎵 Now Playing - Real-time music player with controls
-- 📊 Dashboard - Server statistics and management
-- 📋 Queue Management - Drag-and-drop queue reordering
-- 🏆 Leaderboard - Gaming playtime tracking
-- 📜 History - Listening history and stats
-- 📺 YouTube - Channel notifications management
-- 🔔 Monitors - Web page monitoring (Shopify, Ticketmaster, etc.)
-- 📱 PWA Support - Install as app on iOS/Android with lock screen controls
+- dYZæ Now Playing - Real-time music player with controls
+- dY"S Dashboard - Server statistics and management
+- dY"< Queue Management - Drag-and-drop queue reordering
+- dY?+ Leaderboard - Gaming playtime tracking
+- dY"o History - Listening history and stats
+- dY"§ YouTube - Channel notifications management
+- dY"" Monitors - Web page monitoring (Shopify, Ticketmaster, etc.)
+- dY"ñ PWA Support - Install as app on iOS/Android with lock screen controls
 
 ## Tech Stack
 
@@ -29,26 +29,21 @@ npx serve .
 
 ## Deployment
 
-Deployment is automated via GitHub Actions. Any push to `main` or `master` will:
-1. Copy updated files to the nginx server via SSH
-2. Changes are live immediately (no build step needed)
+Deployment is automated via GitHub Actions using a self-hosted runner on your Unraid server. Any push to `main` or `master` will:
+1. Run the deploy job on the Unraid runner.
+2. `rsync` the static site files into the nginx html root.
 
-### Required Secrets
+### Runner Setup (Unraid)
+1. Install a GitHub Actions runner container on Unraid pointing at this PackSite repo.
+2. Give it labels: `self-hosted,unraid,site`.
+3. Add a volume mapping so the runner can write to nginx:
+   - Host: `/mnt/user/appdata/binhex-nginx/nginx/html/the-pack/`
+   - Container: `/mnt/user/appdata/binhex-nginx/nginx/html/the-pack/`
+   (or mount `/mnt/user/appdata` to the same path inside the runner).
+4. Start the runner and confirm it shows “Idle” in GitHub → Settings → Actions → Runners.
 
-Set these in GitHub repo Settings → Secrets → Actions:
-
-- `SERVER_HOST` - Your server IP (e.g., `192.168.1.16`)
-- `SERVER_USER` - SSH username (e.g., `root`)
-- `SSH_PRIVATE_KEY` - Private SSH key for authentication
-- `SERVER_PORT` - SSH port (optional, defaults to 22)
-
-### Generate SSH Key (if needed)
-
-```bash
-ssh-keygen -t ed25519 -C "github-actions-deploy"
-# Add public key to server's ~/.ssh/authorized_keys
-# Add private key to GitHub secrets as SSH_PRIVATE_KEY
-```
+### GitHub Secrets
+No secrets are required for deployment when using a local runner.
 
 ## License
 

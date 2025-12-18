@@ -183,6 +183,14 @@ class PackBotAPI {
         return this.fetch(`/player/${guildId}/previous`, { method: 'POST' });
     }
 
+    async seek(guildId, time) {
+        return this.fetch(`/player/${guildId}/seek`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ time })
+        });
+    }
+
     async stop(guildId) {
         return this.fetch(`/player/${guildId}/stop`, { method: 'POST' });
     }

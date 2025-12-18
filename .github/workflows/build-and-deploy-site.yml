@@ -1,0 +1,16 @@
+name: packsite-build-and-deploy-unraid (disabled)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: PackSite
+    steps:
+      - name: Disabled
+        run: |
+          echo "Disabled: using local scripts/deploy-packsite.ps1 instead."

@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Now Playing - The Pack</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/pck-Dq2nWAiH.svg?v=2">
+    <link rel="manifest" href="/assets/manifest-3cRaziHB.json">
+    <meta name="theme-color" content="#00a0da">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="The Pack">
+    <link rel="apple-touch-icon" href="/assets/pck-192-C6HHcf5i.png">
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+
+    <style>
+        /* Drag and drop queue styles */
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+            cursor: grab;
+            user-select: none;
+        }
+        .queue-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .queue-item.dragging {
+            opacity: 0.8;
+            transform: scale(1.02);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            cursor: grabbing;
+            z-index: 100;
+        }
+        .queue-item.drag-over {
+            border-top: 2px solid var(--primary);
+            margin-top: -2px;
+        }
+        .queue-item-handle {
+            color: var(--text-secondary);
+            cursor: grab;
+            padding: 4px;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        .queue-item:hover .queue-item-handle {
+            opacity: 1;
+        }
+        .queue-item-number {
+            font-weight: bold;
+            color: var(--primary);
+            min-width: 24px;
+            text-align: center;
+        }
+        .queue-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .queue-item-title {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .queue-item-artist {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .queue-item-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .queue-item:hover .queue-item-actions {
+            opacity: 1;
+        }
+        .queue-item-btn {
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: background 0.2s;
+        }
+        .queue-item-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .queue-item-btn.danger {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff6b6b;
+        }
+        .queue-item-btn.danger:hover {
+            background: rgba(255, 0, 0, 0.3);
+        }
+        .queue-total {
+            text-align: center;
+            padding: 10px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8em;
+            color: #00ff64;
+            margin-left: 10px;
+        }
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #00ff64;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        /* Play Controls */
+        .player-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        .control-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        .control-btn.primary {
+            width: 56px;
+            height: 56px;
+            background: var(--primary);
+            font-size: 24px;
+        }
+        .control-btn.primary:hover {
+            background: var(--primary);
+            filter: brightness(1.2);
+        }
+        .control-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .control-btn:disabled:hover {
+            transform: none;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .control-btn.stop {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff6b6b;
+        }
+        .control-btn.stop:hover {
+            background: rgba(255, 0, 0, 0.3);
+        }
+    </style>
+  <script type="module" crossorigin src="/assets/main-Clcqw10a.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/main-CIuxP9Vf.css">
+</head>
+
+<body>
+    <!-- Hidden audio element for Media Session API (required for iOS/Android lock screen controls) -->
+    <!-- Using a 10-minute silent MP3 for iOS compatibility (Web Audio API doesn't work for Media Session on iOS) -->
+    <audio id="media-session-audio" loop playsinline style="opacity: 0; position: absolute; pointer-events: none; width: 1px; height: 1px; top: 0; left: 0;">
+        <source src="/assets/silence-10min-DkFn46ql.mp3" type="audio/mpeg">
+    </audio>
+    
+    <canvas id="neuro"></canvas>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">
+            <img src="/assets/texture-xISCEeQ5.svg" alt="Pack Logo" class="nav-logo-img">
+        </a>
+        <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+        <div class="nav-links" id="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            <a href="/nowplaying.html" class="nav-link active">Now Playing</a>
+            <a href="/leaderboard.html" class="nav-link">Leaderboard</a>
+            <a href="/history.html" class="nav-link">History</a>
+            <a href="/youtube.html" class="nav-link">YouTube</a>
+            <a href="/monitors.html" class="nav-link">Monitors</a>
+            <a href="/shopify.html" class="nav-link">Shopify</a>
+            <!-- Mobile-only items -->
+            <div class="mobile-nav-divider" id="mobile-divider"></div>
+            <div class="mobile-user-info" id="mobile-user-info">
+                <img class="user-avatar" id="mobile-user-avatar" alt="Avatar">
+                <span id="mobile-user-name"></span>
+            </div>
+            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings">⚙️ Settings</a>
+            <a href="#" class="mobile-nav-item" id="mobile-logout">🚪 Logout</a>
+            <a href="#" class="mobile-login-btn" id="mobile-login">Login with Discord</a>
+        </div>
+        <div class="nav-auth" id="nav-auth">
+            <a href="#" id="login-btn" class="nav-btn">Login with Discord</a>
+            <div id="user-info" class="user-info hidden">
+                <div class="user-info-toggle">
+                    <img id="user-avatar" class="user-avatar" alt="Avatar" crossorigin="anonymous">
+                    <span id="user-name"></span>
+                    <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <div class="user-dropdown">
+                    <div class="user-dropdown-inner">
+                        <a href="/settings.html" class="dropdown-item">
+                            <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                            Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" id="logout-btn" class="dropdown-item" onclick="packBotAPI.logout()">
+                            <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14l5-5-5-5m5 5H9"/></svg>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <h1 class="page-title">🎵 Now Playing</h1>
+        <p class="page-subtitle">See what's currently playing in The Pack servers</p>
+        
+        <!-- Server Selector -->
+        <div class="leaderboard-controls" style="display: flex; gap: 10px; align-items: center;">
+            <select id="guild-select" class="leaderboard-select" style="flex: 1;">
+                <option value="">Loading servers...</option>
+            </select>
+            <button id="set-favorite-btn" style="padding: 10px 16px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;" title="Set as default server">⭐ Set Favorite</button>
+        </div>
+
+        <!-- Now Playing Card -->
+        <div class="card" id="now-playing-card">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+            </div>
+            
+            <div id="now-playing-content" class="hidden">
+                <!-- Playing State -->
+                <div id="playing-state" class="now-playing-widget hidden">
+                    <img id="np-thumbnail" class="now-playing-thumbnail" src="" alt="Thumbnail">
+                    <div class="now-playing-info">
+                        <div id="np-title" class="now-playing-title">Track Title</div>
+                        <div id="np-artist" class="now-playing-artist">Artist</div>
+                        
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div id="np-progress" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                            <div class="progress-time">
+                                <span id="np-current">0:00</span>
+                                <span id="np-duration">0:00</span>
+                            </div>
+                        </div>
+                        
+                        <div id="np-meta" style="color: var(--text-secondary); font-size: 0.9em; margin-top: 10px;">
+                            <span id="np-requestedby"></span>
+                        </div>
+                        
+                        <!-- Player Controls -->
+                        <div class="player-controls">
+                            <button class="control-btn stop" id="btn-stop" title="Stop">⏹</button>
+                            <button class="control-btn" id="btn-previous" title="Previous">⏮</button>
+                            <button class="control-btn primary" id="btn-playpause" title="Play/Pause">⏸</button>
+                            <button class="control-btn" id="btn-skip" title="Skip">⏭</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="empty-state hidden">
+                    <div class="empty-state-icon">🎧</div>
+                    <p>Nothing is playing right now</p>
+                    <p style="font-size: 0.9em;">Use <code>/play</code> in Discord to start the music!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add to Queue -->
+        <div class="card" style="margin-top: 25px;" id="add-to-queue-card">
+            <h3 style="margin: 0 0 15px 0; color: var(--primary);">➕ Add to Queue</h3>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="add-song-input" placeholder="Song name, URL, or search query..." style="flex: 1; padding: 12px; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary);">
+                <button id="add-song-btn" style="padding: 12px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">Add</button>
+            </div>
+            <div id="add-song-status" style="margin-top: 10px; font-size: 0.9em;"></div>
+        </div>
+
+        <!-- Queue Preview -->
+        <div class="card" style="margin-top: 25px;" id="queue-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: var(--primary);">📋 Up Next <span class="live-indicator" id="live-indicator"><span class="live-dot"></span> Live</span></h3>
+                <div style="display: flex; gap: 8px;">
+                    <button id="shuffle-queue-btn" title="Shuffle Queue" style="padding: 8px 12px; background: rgba(255,255,255,0.1); color: var(--text-primary); border: none; border-radius: 6px; cursor: pointer;">🔀</button>
+                    <button id="clear-queue-btn" title="Clear Queue" style="padding: 8px 12px; background: rgba(255,255,255,0.1); color: var(--text-primary); border: none; border-radius: 6px; cursor: pointer;">🗑️</button>
+                </div>
+            </div>
+            <div id="queue-container">
+                <div class="empty-state" id="queue-empty">
+                    <p>Queue is empty</p>
+                </div>
+                <div id="queue-list" class="hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="x-shader/x-fragment" id="vertShader">
+        precision mediump float;
+        varying vec2 vUv;
+        attribute vec2 a_position;
+
+        void main() {
+            vUv = .5 * (a_position + 1.);
+            gl_Position = vec4(a_position, 0.0, 1.0);
+        }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragShader">
+        precision mediump float;
+    
+        varying vec2 vUv;
+        uniform float u_time;
+        uniform float u_ratio;
+        uniform vec2 u_pointer_position;
+        uniform float u_scroll_progress;
+    
+        vec2 rotate(vec2 uv, float th) {
+            return mat2(cos(th), sin(th), -sin(th), cos(th)) * uv;
+        }
+    
+        float neuro_shape(vec2 uv, float t, float p) {
+            vec2 sine_acc = vec2(0.);
+            vec2 res = vec2(0.);
+            float scale = 8.;
+    
+            for (int j = 0; j < 15; j++) {
+                uv = rotate(uv, 1.);
+                sine_acc = rotate(sine_acc, 1.);
+                vec2 layer = uv * scale + float(j) + sine_acc - t;
+                sine_acc += sin(layer);
+                res += (.5 + .5 * cos(layer)) / scale;
+                scale *= (1.2 - .07 * p);
+            }
+            return res.x + res.y;
+        }
+    
+        void main() {
+            vec2 uv = .5 * vUv;
+            uv.x *= u_ratio;
+    
+            vec2 pointer = vUv - u_pointer_position;
+            pointer.x *= u_ratio;
+            float p = clamp(length(pointer), 0., 1.);
+            p = .5 * pow(1. - p, 2.);
+    
+            float t = .001 * u_time;
+    
+            float noise = neuro_shape(uv, t, p);
+    
+            noise = 1.2 * pow(noise, 3.);
+            noise += pow(noise, 10.);
+            noise = max(.0, noise - .42);
+            noise *= (1. - length(vUv - .5));
+            noise = clamp(noise * 1.35, 0., 1.);
+
+            vec3 cool = vec3(0.078,0.149,0.259);
+            vec3 warm = vec3(0.996,0.235,0.184);
+
+            float n = noise;
+            float warmMix = smoothstep(0.08, 0.40, n) * 0.30;
+            warmMix *= (0.35 + 0.65 * p);
+            vec3 color = mix(cool, warm, warmMix);
+
+            color = color * n;
+            color += warm * pow(n, 2.2) * 0.06;
+     
+            gl_FragColor = vec4(color, noise);
+        }
+    </script>
+
+    <script src="/api.js?v=4"></script>
+    <script>
+        let currentGuildId = '';
+        let progressInterval = null;
+        let currentTrackProgress = 0;
+        let currentTrackDuration = 0;
+        let guildsData = null;
+        let favoriteGuildId = null;
+        let isPaused = false;
+        let currentTrackData = null;
+        let audioUnlocked = false;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Unlock audio on first interaction (required for iOS Media Session)
+            const unlockAudio = async () => {
+                if (audioUnlocked) return;
+                
+                const audio = document.getElementById('media-session-audio');
+                if (!audio) return;
+
+                try {
+                    await audio.play();
+                    audioUnlocked = true;
+                    console.log('Audio unlocked for Media Session');
+                    
+                    // Remove listeners
+                    document.removeEventListener('click', unlockAudio);
+                    document.removeEventListener('touchstart', unlockAudio);
+                    document.removeEventListener('keydown', unlockAudio);
+                } catch (e) {
+                    console.log('Audio play failed:', e);
+                }
+            };
+
+            document.addEventListener('click', unlockAudio);
+            document.addEventListener('touchstart', unlockAudio);
+            document.addEventListener('keydown', unlockAudio);
+
+            // Check authentication first
+            const authOk = await checkAuth();
+            if (!authOk) return;
+            
+            const guildSelect = document.getElementById('guild-select');
+            
+            // Load guilds dynamically
+            await loadGuilds();
+            
+            guildSelect.addEventListener('change', (e) => {
+                currentGuildId = e.target.value;
+                loadNowPlaying();
+                subscribeToGuild();
+            });
+
+            if (currentGuildId) {
+                loadNowPlaying();
+                setupWebSocket();
+            }
+            
+            // Setup playback control buttons
+            setupPlayerControls();
+            setupProgressBar();
+            // Setup favorite button
+            document.getElementById('set-favorite-btn').addEventListener('click', setFavoriteGuild);
+
+            // Setup queue management buttons
+            document.getElementById('add-song-btn').addEventListener('click', addSongToQueue);
+            document.getElementById('add-song-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addSongToQueue();
+            });
+            document.getElementById('shuffle-queue-btn').addEventListener('click', shuffleQueue);
+            document.getElementById('clear-queue-btn').addEventListener('click', clearQueue);
+        });
+
+        async function addSongToQueue() {
+            const input = document.getElementById('add-song-input');
+            const status = document.getElementById('add-song-status');
+            const btn = document.getElementById('add-song-btn');
+            const query = input.value.trim();
+
+            if (!query) {
+                status.innerHTML = '<span style="color: var(--error);">Please enter a song name or URL</span>';
+                return;
+            }
+
+            if (!currentGuildId) {
+                status.innerHTML = '<span style="color: var(--error);">Please select a server first</span>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '⏳';
+            status.innerHTML = '<span style="color: var(--text-secondary);">Adding...</span>';
+
+            try {
+                const result = await packBotAPI.addToQueue(currentGuildId, query);
+                if (result?.success) {
+                    status.innerHTML = `<span style="color: var(--success);">✓ Added: ${escapeHtml(result.track.title)}</span>`;
+                    input.value = '';
+                    loadQueue();
+                } else {
+                    status.innerHTML = `<span style="color: var(--error);">${result?.error || 'Failed to add song'}</span>`;
+                }
+            } catch (error) {
+                status.innerHTML = `<span style="color: var(--error);">${error.message || 'Failed to add song'}</span>`;
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Add';
+        }
+
+        async function shuffleQueue() {
+            if (!currentGuildId) return;
+
+            const btn = document.getElementById('shuffle-queue-btn');
+            btn.disabled = true;
+
+            try {
+                await packBotAPI.shuffleQueue(currentGuildId);
+                loadQueue();
+            } catch (error) {
+                console.error('Failed to shuffle:', error);
+            }
+
+            btn.disabled = false;
+        }
+
+        async function clearQueue() {
+            if (!currentGuildId) return;
+
+            if (!confirm('Clear the entire queue?')) return;
+
+            const btn = document.getElementById('clear-queue-btn');
+            btn.disabled = true;
+
+            try {
+                await packBotAPI.clearQueue(currentGuildId);
+                loadQueue();
+            } catch (error) {
+                console.error('Failed to clear:', error);
+            }
+
+            btn.disabled = false;
+        }
+
+        function setupProgressBar() {
+            const progressBar = document.querySelector('.progress-bar');
+            
+            progressBar.addEventListener('click', (e) => {
+                if (!currentTrackDuration) return;
+                
+                const rect = progressBar.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percentage = Math.max(0, Math.min(1, x / rect.width));
+                const seekTime = Math.floor(percentage * currentTrackDuration);
+                
+                seekTo(seekTime);
+            });
+            
+            // Add cursor pointer to show it's clickable
+            progressBar.style.cursor = 'pointer';
+        }
+
+        async function seekTo(time) {
+            if (!currentGuildId) return;
+            
+            console.log('Seeking to:', time, 'seconds');
+            
+            // Optimistic update
+            currentTrackProgress = time;
+            updateProgress();
+            
+            // Update media session position immediately
+            if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && currentTrackDuration > 0) {
+                try {
+                    navigator.mediaSession.setPositionState({
+                        duration: currentTrackDuration,
+                        playbackRate: 1,
+                        position: Math.min(time, currentTrackDuration)
+                    });
+                } catch (e) {
+                    console.log('setPositionState failed:', e);
+                }
+            }
+            
+            try {
+                const result = await packBotAPI.seek(currentGuildId, time);
+                console.log('Seek result:', result);
+                if (!result?.success) {
+                    console.error('Seek failed:', result?.error);
+                }
+            } catch (error) {
+                console.error('Failed to seek:', error);
+            }
+        }
+
+        // ==========================================
+        // Player Controls
+        // ==========================================
+        
+        function setupPlayerControls() {
+            document.getElementById('btn-playpause').addEventListener('click', togglePlayPause);
+            document.getElementById('btn-skip').addEventListener('click', skipTrack);
+            document.getElementById('btn-previous').addEventListener('click', previousTrack);
+            document.getElementById('btn-stop').addEventListener('click', stopPlayback);
+        }
+
+        async function togglePlayPause() {
+            if (!currentGuildId) return;
+            
+            // Ensure Media Session audio is active
+            const audio = document.getElementById('media-session-audio');
+            if (audio && audio.paused) audio.play().catch(() => {});
+
+            const btn = document.getElementById('btn-playpause');
+            btn.disabled = true;
+            
+            try {
+                const result = await packBotAPI.togglePause(currentGuildId);
+                if (result?.success) {
+                    isPaused = result.paused;
+                    updatePlayPauseButton();
+                    
+                    // Update progress interval
+                    if (isPaused) {
+                        if (progressInterval) clearInterval(progressInterval);
+                    } else {
+                        startProgressInterval();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to toggle pause:', error);
+            }
+            
+            btn.disabled = false;
+        }
+
+        async function skipTrack() {
+            if (!currentGuildId) return;
+            
+            // Ensure Media Session audio is active
+            const audio = document.getElementById('media-session-audio');
+            if (audio && audio.paused) audio.play().catch(() => {});
+
+            const btn = document.getElementById('btn-skip');
+            btn.disabled = true;
+            
+            try {
+                await packBotAPI.skip(currentGuildId);
+                // WebSocket will update the UI
+            } catch (error) {
+                console.error('Failed to skip:', error);
+            }
+            
+            btn.disabled = false;
+        }
+
+        async function previousTrack() {
+            if (!currentGuildId) return;
+            
+            // Ensure Media Session audio is active
+            const audio = document.getElementById('media-session-audio');
+            if (audio && audio.paused) audio.play().catch(() => {});
+
+            const btn = document.getElementById('btn-previous');
+            btn.disabled = true;
+            
+            try {
+                const result = await packBotAPI.previous(currentGuildId);
+                if (!result?.success) {
+                    console.log('No previous track available');
+                }
+                // WebSocket will update the UI
+            } catch (error) {
+                console.error('Failed to go to previous:', error);
+            }
+            
+            btn.disabled = false;
+        }
+
+        async function stopPlayback() {
+            if (!currentGuildId) return;
+            
+            if (!confirm('Stop playback and clear the queue?')) return;
+            
+            // Ensure Media Session audio is active (so we can clear it properly if needed)
+            const audio = document.getElementById('media-session-audio');
+            if (audio && audio.paused) audio.play().catch(() => {});
+
+            const btn = document.getElementById('btn-stop');
+            btn.disabled = true;
+            
+            try {
+                await packBotAPI.stop(currentGuildId);
+                showEmptyState();
+            } catch (error) {
+                console.error('Failed to stop:', error);
+            }
+            
+            btn.disabled = false;
+        }
+
+        function updatePlayPauseButton() {
+            const btn = document.getElementById('btn-playpause');
+            btn.textContent = isPaused ? '▶' : '⏸';
+            btn.title = isPaused ? 'Play' : 'Pause';
+        }
+
+        function startProgressInterval() {
+            if (progressInterval) clearInterval(progressInterval);
+            progressInterval = setInterval(() => {
+                if (!isPaused && currentTrackProgress < currentTrackDuration) {
+                    currentTrackProgress++;
+                    updateProgress();
+                }
+            }, 1000);
+        }
+
+        // Media Session API for iOS/Android lock screen controls
+        // Convert YouTube thumbnail URL to square version (sddefault is 640x480, we'll crop it visually)
+        // Or use hqdefault which is 480x360 - both have black bars but are more square than maxresdefault
+        function getSquareThumbnail(thumbnailUrl) {
+            if (!thumbnailUrl) return null;
+            
+            // YouTube thumbnail patterns - convert to sddefault (640x480) for better quality
+            // sddefault and hqdefault have black letterbox bars but are closer to square
+            if (thumbnailUrl.includes('i.ytimg.com') || thumbnailUrl.includes('img.youtube.com')) {
+                // Replace maxresdefault, hqdefault, mqdefault, etc. with sddefault
+                return thumbnailUrl
+                    .replace(/maxresdefault\.jpg/, 'sddefault.jpg')
+                    .replace(/hqdefault\.jpg/, 'sddefault.jpg')
+                    .replace(/mqdefault\.jpg/, 'sddefault.jpg');
+            }
+            
+            return thumbnailUrl;
+        }
+
+        function updateMediaSession(track) {
+            if (!('mediaSession' in navigator)) return;
+            
+            currentTrackData = track;
+            
+            // Ensure audio is playing (if unlocked)
+            const audio = document.getElementById('media-session-audio');
+            if (audio && audioUnlocked) {
+                if (audio.paused) {
+                    audio.play().catch(e => console.log('Media Session audio play failed:', e));
+                }
+                // Make sure audio has a valid source
+                if (!audio.src && audio.querySelector('source')) {
+                    audio.load();
+                    audio.play().catch(e => console.log('Media Session audio reload failed:', e));
+                }
+            }
+            
+            // Use square-ish thumbnail for lock screen (sddefault is 640x480 vs maxresdefault 1280x720)
+            const squareThumb = getSquareThumbnail(track.thumbnail);
+            
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: track.title || 'Unknown Track',
+                artist: track.artist || 'Unknown Artist',
+                album: 'The Pack',
+                artwork: [
+                    { src: squareThumb || '/img/pck-192.png', sizes: '192x192', type: 'image/jpeg' },
+                    { src: squareThumb || '/img/pck-512.png', sizes: '512x512', type: 'image/jpeg' }
+                ]
+            });
+            
+            // Set up action handlers
+            navigator.mediaSession.setActionHandler('play', () => {
+                if (isPaused) togglePlayPause();
+            });
+            
+            navigator.mediaSession.setActionHandler('pause', () => {
+                if (!isPaused) togglePlayPause();
+            });
+            
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+                previousTrack();
+            });
+            
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                skipTrack();
+            });
+            
+            navigator.mediaSession.setActionHandler('stop', () => {
+                stopPlayback();
+            });
+
+            navigator.mediaSession.setActionHandler('seekto', (details) => {
+                console.log('Media Session seekto:', details);
+                if (details.seekTime !== undefined && currentGuildId) {
+                    seekTo(details.seekTime);
+                }
+            });
+            
+            // Update playback state
+            navigator.mediaSession.playbackState = isPaused ? 'paused' : 'playing';
+            
+            // Update position state for scrubber
+            // Only update if we have valid duration
+            if ('setPositionState' in navigator.mediaSession && currentTrackDuration > 0) {
+                try {
+                    navigator.mediaSession.setPositionState({
+                        duration: currentTrackDuration,
+                        playbackRate: 1,
+                        position: Math.min(currentTrackProgress, currentTrackDuration)
+                    });
+                } catch (e) {
+                    console.log('setPositionState failed:', e);
+                }
+            }
+        }
+
+        function clearMediaSession() {
+            if (!('mediaSession' in navigator)) return;
+            
+            const audio = document.getElementById('media-session-audio');
+            if (audio) {
+                audio.pause();
+            }
+            
+            navigator.mediaSession.metadata = null;
+            navigator.mediaSession.playbackState = 'none';
+        }
+
+        async function removeFromQueue(position) {
+            if (!currentGuildId) return;
+
+            try {
+                await packBotAPI.removeFromQueue(currentGuildId, position);
+                loadQueue();
+            } catch (error) {
+                console.error('Failed to remove:', error);
+            }
+        }
+
+        async function setFavoriteGuild() {
+            if (!currentGuildId) {
+                alert('Please select a server first');
+                return;
+            }
+            
+            const btn = document.getElementById('set-favorite-btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Setting...';
+            
+            try {
+                const result = await packBotAPI.setFavoriteGuild(currentGuildId);
+                if (result?.success) {
+                    favoriteGuildId = currentGuildId;
+                    // Update dropdown to show star
+                    const select = document.getElementById('guild-select');
+                    Array.from(select.options).forEach(opt => {
+                        if (opt.value && guildsData?.guilds) {
+                            const guild = guildsData.guilds.find(g => g.id === opt.value);
+                            if (guild) {
+                                const isFavorite = opt.value === favoriteGuildId;
+                                opt.textContent = (isFavorite ? '⭐ ' : '') + guild.name;
+                            }
+                        }
+                    });
+                    btn.textContent = '✅ Saved!';
+                    setTimeout(() => { btn.textContent = '⭐ Set Favorite'; btn.disabled = false; }, 1500);
+                }
+            } catch (error) {
+                console.error('Failed to set favorite:', error);
+                btn.textContent = '❌ Failed';
+                setTimeout(() => { btn.textContent = '⭐ Set Favorite'; btn.disabled = false; }, 1500);
+            }
+        }
+
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/me');
+                const data = await response.json();
+                
+                if (!data.authenticated) {
+                    // Redirect to login
+                    window.location.href = '/api/auth/discord';
+                    return false;
+                }
+                
+                // Update UI with user info
+                document.getElementById('login-btn').classList.add('hidden');
+                document.getElementById('user-info').classList.remove('hidden');
+                document.getElementById('user-name').textContent = data.username;
+                if (data.avatar) {
+                    document.getElementById('user-avatar').src = data.avatar;
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                window.location.href = '/api/auth/discord';
+                return false;
+            }
+        }
+
+        async function loadGuilds() {
+            const guildSelect = document.getElementById('guild-select');
+            
+            try {
+                // Load guilds and preferences in parallel
+                const [guildsRes, prefsRes] = await Promise.all([
+                    fetch('/api/guilds'),
+                    packBotAPI.getPreferences()
+                ]);
+                
+                if (guildsRes.status === 401) {
+                    window.location.href = '/api/auth/discord';
+                    return;
+                }
+                
+                const data = await guildsRes.json();
+                guildsData = data;
+                favoriteGuildId = prefsRes?.favoriteGuildId || null;
+                
+                // Check for guild in URL query parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlGuildId = urlParams.get('guild');
+                
+                if (data.guilds && data.guilds.length > 0) {
+                    guildSelect.innerHTML = data.guilds.map((g) => {
+                        const isFavorite = g.id === favoriteGuildId;
+                        return `<option value="${g.id}">${isFavorite ? '⭐ ' : ''}${escapeHtml(g.name)}</option>`;
+                    }).join('');
+                    
+                    // Priority: URL param > favorite guild > first guild
+                    if (urlGuildId && data.guilds.find(g => g.id === urlGuildId)) {
+                        currentGuildId = urlGuildId;
+                        guildSelect.value = urlGuildId;
+                    } else if (favoriteGuildId && data.guilds.find(g => g.id === favoriteGuildId)) {
+                        currentGuildId = favoriteGuildId;
+                        guildSelect.value = favoriteGuildId;
+                    } else {
+                        currentGuildId = data.guilds[0].id;
+                    }
+                } else {
+                    guildSelect.innerHTML = '<option value="">No servers available</option>';
+                }
+            } catch (error) {
+                console.error('Failed to load guilds:', error);
+                guildSelect.innerHTML = '<option value="">Failed to load servers</option>';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function loadNowPlaying() {
+            if (!currentGuildId) return;
+            
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('now-playing-content').classList.add('hidden');
+
+            const data = await packBotAPI.getNowPlaying(currentGuildId);
+            
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('now-playing-content').classList.remove('hidden');
+
+            if (data && data.playing && data.track) {
+                showPlayingState(data);
+            } else {
+                showEmptyState();
+            }
+
+            // Load queue
+            loadQueue();
+        }
+
+        async function loadQueue() {
+            const data = await packBotAPI.getQueue(currentGuildId, 1, 20);
+            renderQueue(data);
+        }
+
+        function renderQueue(data) {
+            const queueList = document.getElementById('queue-list');
+            const queueEmpty = document.getElementById('queue-empty');
+
+            if (data && data.queue && data.queue.length > 0) {
+                queueEmpty.classList.add('hidden');
+                queueList.classList.remove('hidden');
+                
+                queueList.innerHTML = data.queue.map((track) => `
+                    <div class="queue-item" draggable="true" data-position="${track.position}">
+                        <span class="queue-item-handle">⋮⋮</span>
+                        <span class="queue-item-number">${track.position}</span>
+                        <div class="queue-item-info">
+                            <div class="queue-item-title">${escapeHtml(track.title)}</div>
+                            <div class="queue-item-artist">${escapeHtml(track.artist || 'Unknown')}</div>
+                        </div>
+                        <span style="color: var(--text-secondary)">${formatDuration(track.duration)}</span>
+                        <div class="queue-item-actions">
+                            <button class="queue-item-btn danger" onclick="removeFromQueue(${track.position})" title="Remove">✕</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Add total indicator if there are more items
+                if (data.total > data.queue.length) {
+                    queueList.innerHTML += `<div class="queue-total">+ ${data.total - data.queue.length} more songs in queue</div>`;
+                }
+                
+                // Setup drag and drop
+                setupDragAndDrop();
+            } else {
+                queueEmpty.classList.remove('hidden');
+                queueList.classList.add('hidden');
+            }
+        }
+
+        function showPlayingState(data) {
+            document.getElementById('playing-state').classList.remove('hidden');
+            document.getElementById('empty-state').classList.add('hidden');
+
+            const track = data.track;
+            document.getElementById('np-thumbnail').src = track.thumbnail || '/img/default-album.png';
+            document.getElementById('np-title').textContent = track.title;
+            document.getElementById('np-artist').textContent = track.artist || 'Unknown Artist';
+            document.getElementById('np-requestedby').textContent = `Requested by ${track.requestedBy}`;
+            document.getElementById('np-duration').textContent = formatDuration(track.duration);
+
+            // Use the progress from the server, but don't jump backwards if we're just a second or two ahead
+            // This prevents the progress bar from stuttering due to network latency
+            const serverProgress = track.progress || 0;
+            if (Math.abs(serverProgress - currentTrackProgress) > 2 || currentTrackProgress === 0) {
+                currentTrackProgress = serverProgress;
+            }
+            
+            currentTrackDuration = track.duration || 0;
+            isPaused = data.paused || false;
+            
+            updateProgress();
+            updatePlayPauseButton();
+            
+            // Update button states based on available actions
+            document.getElementById('btn-previous').disabled = !(data.hasPrevious);
+            document.getElementById('btn-skip').disabled = false;
+            
+            // Update Media Session for lock screen controls
+            updateMediaSession(track);
+
+            // Start progress interval if not paused
+            if (!isPaused) {
+                startProgressInterval();
+            } else {
+                if (progressInterval) clearInterval(progressInterval);
+            }
+        }
+
+        function updateProgress() {
+            const percentage = currentTrackDuration > 0 
+                ? (currentTrackProgress / currentTrackDuration) * 100 
+                : 0;
+            
+            document.getElementById('np-progress').style.width = `${percentage}%`;
+            document.getElementById('np-current').textContent = formatDuration(currentTrackProgress);
+
+            // Update lock screen progress
+            if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && currentTrackDuration > 0) {
+                try {
+                    navigator.mediaSession.setPositionState({
+                        duration: currentTrackDuration,
+                        playbackRate: isPaused ? 0 : 1,
+                        position: Math.min(currentTrackProgress, currentTrackDuration)
+                    });
+                } catch (e) {
+                    // Ignore errors (can happen if audio is not playing yet)
+                }
+            }
+        }
+
+        function showEmptyState() {
+            document.getElementById('playing-state').classList.add('hidden');
+            document.getElementById('empty-state').classList.remove('hidden');
+            
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+            
+            // Clear media session
+            clearMediaSession();
+        }
+
+        function setupWebSocket() {
+            // WebSocket connects through nginx proxy
+            const wsUrl = window.location.origin;
+
+            const socket = io(wsUrl, {
+                path: '/socket.io',
+                transports: ['websocket', 'polling']
+            });
+
+            socket.on('connect', () => {
+                console.log('WebSocket connected');
+                document.getElementById('live-indicator').style.display = 'inline-flex';
+                subscribeToGuild();
+            });
+
+            socket.on('disconnect', () => {
+                console.log('WebSocket disconnected');
+                document.getElementById('live-indicator').style.display = 'none';
+            });
+
+            socket.on('nowplaying', (data) => {
+                if (data.playing && data.track) {
+                    showPlayingState(data);
+                } else {
+                    showEmptyState();
+                }
+                // Use the queue data from the nowplaying event
+                if (data.queue) {
+                    renderQueue({ queue: data.queue, total: data.queueLength || data.queue.length });
+                }
+            });
+
+            socket.on('queueUpdate', (data) => {
+                renderQueue(data);
+            });
+
+            window.nowPlayingSocket = socket;
+        }
+
+        function subscribeToGuild() {
+            if (window.nowPlayingSocket) {
+                window.nowPlayingSocket.emit('subscribe', currentGuildId);
+            }
+        }
+
+        // Drag and drop functionality
+        let draggedItem = null;
+        let draggedPosition = null;
+
+        function setupDragAndDrop() {
+            const queueList = document.getElementById('queue-list');
+            const items = queueList.querySelectorAll('.queue-item[draggable="true"]');
+
+            items.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('dragenter', handleDragEnter);
+                item.addEventListener('dragleave', handleDragLeave);
+                item.addEventListener('drop', handleDrop);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedItem = this;
+            draggedPosition = parseInt(this.dataset.position);
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', draggedPosition);
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.queue-item').forEach(item => {
+                item.classList.remove('drag-over');
+            });
+            draggedItem = null;
+            draggedPosition = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            if (this !== draggedItem) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        async function handleDrop(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            
+            const targetPosition = parseInt(this.dataset.position);
+            
+            if (draggedPosition && targetPosition && draggedPosition !== targetPosition) {
+                // Call API to move track
+                try {
+                    await packBotAPI.moveInQueue(currentGuildId, draggedPosition, targetPosition);
+                    // Queue will be updated via WebSocket, but load anyway as fallback
+                    setTimeout(() => loadQueue(), 500);
+                } catch (error) {
+                    console.error('Failed to move track:', error);
+                    loadQueue(); // Reload to reset state
+                }
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+
+</html>

@@ -7,14 +7,14 @@
     <title>Now Playing - The Pack</title>
     <link rel="icon" type="image/svg+xml" href="/img/pck.svg?v=2">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#ff006a">
+    <meta name="theme-color" content="#00a0da">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="The Pack">
     <link rel="apple-touch-icon" href="/img/pck-192.png">
     <link rel="stylesheet" href="/styles.css">
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-    <script src="/nav.js" defer></script>
+
     <style>
         /* Drag and drop queue styles */
         .queue-item {
@@ -191,7 +191,10 @@
 
 <body>
     <!-- Hidden audio element for Media Session API (required for iOS/Android lock screen controls) -->
-    <audio id="media-session-audio" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" loop></audio>
+    <!-- Using a 10-minute silent MP3 for iOS compatibility (Web Audio API doesn't work for Media Session on iOS) -->
+    <audio id="media-session-audio" loop playsinline style="opacity: 0; position: absolute; pointer-events: none; width: 1px; height: 1px; top: 0; left: 0;">
+        <source src="/silence-10min.mp3" type="audio/mpeg">
+    </audio>
     
     <canvas id="neuro"></canvas>
     
@@ -391,12 +394,22 @@
     
             noise = 1.2 * pow(noise, 3.);
             noise += pow(noise, 10.);
-            noise = max(.0, noise - .5);
+            noise = max(.0, noise - .42);
             noise *= (1. - length(vUv - .5));
+            noise = clamp(noise * 1.35, 0., 1.);
 
-            vec3 color = vec3(0.071,0.0,0.029);
+            vec3 cool = vec3(0.078,0.149,0.259);
+            vec3 warm = vec3(0.996,0.235,0.184);
 
-            color = color * noise;            gl_FragColor = vec4(color, noise);
+            float n = noise;
+            float warmMix = smoothstep(0.08, 0.40, n) * 0.30;
+            warmMix *= (0.35 + 0.65 * p);
+            vec3 color = mix(cool, warm, warmMix);
+
+            color = color * n;
+            color += warm * pow(n, 2.2) * 0.06;
+     
+            gl_FragColor = vec4(color, noise);
         }
     </script>
 
@@ -411,8 +424,34 @@
         let favoriteGuildId = null;
         let isPaused = false;
         let currentTrackData = null;
+        let audioUnlocked = false;
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // Unlock audio on first interaction (required for iOS Media Session)
+            const unlockAudio = async () => {
+                if (audioUnlocked) return;
+                
+                const audio = document.getElementById('media-session-audio');
+                if (!audio) return;
+
+                try {
+                    await audio.play();
+                    audioUnlocked = true;
+                    console.log('Audio unlocked for Media Session');
+                    
+                    // Remove listeners
+                    document.removeEventListener('click', unlockAudio);
+                    document.removeEventListener('touchstart', unlockAudio);
+                    document.removeEventListener('keydown', unlockAudio);
+                } catch (e) {
+                    console.log('Audio play failed:', e);
+                }
+            };
+
+            document.addEventListener('click', unlockAudio);
+            document.addEventListener('touchstart', unlockAudio);
+            document.addEventListener('keydown', unlockAudio);
+
             // Check authentication first
             const authOk = await checkAuth();
             if (!authOk) return;
@@ -435,6 +474,7 @@
             
             // Setup playback control buttons
             setupPlayerControls();
+            setupProgressBar();
             // Setup favorite button
             document.getElementById('set-favorite-btn').addEventListener('click', setFavoriteGuild);
 
@@ -518,6 +558,57 @@
             btn.disabled = false;
         }
 
+        function setupProgressBar() {
+            const progressBar = document.querySelector('.progress-bar');
+            
+            progressBar.addEventListener('click', (e) => {
+                if (!currentTrackDuration) return;
+                
+                const rect = progressBar.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percentage = Math.max(0, Math.min(1, x / rect.width));
+                const seekTime = Math.floor(percentage * currentTrackDuration);
+                
+                seekTo(seekTime);
+            });
+            
+            // Add cursor pointer to show it's clickable
+            progressBar.style.cursor = 'pointer';
+        }
+
+        async function seekTo(time) {
+            if (!currentGuildId) return;
+            
+            console.log('Seeking to:', time, 'seconds');
+            
+            // Optimistic update
+            currentTrackProgress = time;
+            updateProgress();
+            
+            // Update media session position immediately
+            if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && currentTrackDuration > 0) {
+                try {
+                    navigator.mediaSession.setPositionState({
+                        duration: currentTrackDuration,
+                        playbackRate: 1,
+                        position: Math.min(time, currentTrackDuration)
+                    });
+                } catch (e) {
+                    console.log('setPositionState failed:', e);
+                }
+            }
+            
+            try {
+                const result = await packBotAPI.seek(currentGuildId, time);
+                console.log('Seek result:', result);
+                if (!result?.success) {
+                    console.error('Seek failed:', result?.error);
+                }
+            } catch (error) {
+                console.error('Failed to seek:', error);
+            }
+        }
+
         // ==========================================
         // Player Controls
         // ==========================================
@@ -532,6 +623,10 @@
         async function togglePlayPause() {
             if (!currentGuildId) return;
             
+            // Ensure Media Session audio is active
+            const audio = document.getElementById('media-session-audio');
+            if (audio && audio.paused) audio.play().catch(() => {});
+
             const btn = document.getElementById('btn-playpause');
             btn.disabled = true;
             
@@ -558,6 +653,10 @@
         async function skipTrack() {
             if (!currentGuildId) return;
             
+            // Ensure Media Session audio is active
+            const audio = document.getElementById('media-session-audio');
+            if (audio && audio.paused) audio.play().catch(() => {});
+
             const btn = document.getElementById('btn-skip');
             btn.disabled = true;
             
@@ -574,6 +673,10 @@
         async function previousTrack() {
             if (!currentGuildId) return;
             
+            // Ensure Media Session audio is active
+            const audio = document.getElementById('media-session-audio');
+            if (audio && audio.paused) audio.play().catch(() => {});
+
             const btn = document.getElementById('btn-previous');
             btn.disabled = true;
             
@@ -595,6 +698,10 @@
             
             if (!confirm('Stop playback and clear the queue?')) return;
             
+            // Ensure Media Session audio is active (so we can clear it properly if needed)
+            const audio = document.getElementById('media-session-audio');
+            if (audio && audio.paused) audio.play().catch(() => {});
+
             const btn = document.getElementById('btn-stop');
             btn.disabled = true;
             
@@ -625,24 +732,52 @@
         }
 
         // Media Session API for iOS/Android lock screen controls
+        // Convert YouTube thumbnail URL to square version (sddefault is 640x480, we'll crop it visually)
+        // Or use hqdefault which is 480x360 - both have black bars but are more square than maxresdefault
+        function getSquareThumbnail(thumbnailUrl) {
+            if (!thumbnailUrl) return null;
+            
+            // YouTube thumbnail patterns - convert to sddefault (640x480) for better quality
+            // sddefault and hqdefault have black letterbox bars but are closer to square
+            if (thumbnailUrl.includes('i.ytimg.com') || thumbnailUrl.includes('img.youtube.com')) {
+                // Replace maxresdefault, hqdefault, mqdefault, etc. with sddefault
+                return thumbnailUrl
+                    .replace(/maxresdefault\.jpg/, 'sddefault.jpg')
+                    .replace(/hqdefault\.jpg/, 'sddefault.jpg')
+                    .replace(/mqdefault\.jpg/, 'sddefault.jpg');
+            }
+            
+            return thumbnailUrl;
+        }
+
         function updateMediaSession(track) {
             if (!('mediaSession' in navigator)) return;
             
             currentTrackData = track;
             
-            // Play the silent audio to enable media session
+            // Ensure audio is playing (if unlocked)
             const audio = document.getElementById('media-session-audio');
-            if (audio) {
-                audio.play().catch(() => {});
+            if (audio && audioUnlocked) {
+                if (audio.paused) {
+                    audio.play().catch(e => console.log('Media Session audio play failed:', e));
+                }
+                // Make sure audio has a valid source
+                if (!audio.src && audio.querySelector('source')) {
+                    audio.load();
+                    audio.play().catch(e => console.log('Media Session audio reload failed:', e));
+                }
             }
+            
+            // Use square-ish thumbnail for lock screen (sddefault is 640x480 vs maxresdefault 1280x720)
+            const squareThumb = getSquareThumbnail(track.thumbnail);
             
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: track.title || 'Unknown Track',
                 artist: track.artist || 'Unknown Artist',
                 album: 'The Pack',
                 artwork: [
-                    { src: track.thumbnail || '/img/pck-192.png', sizes: '192x192', type: 'image/png' },
-                    { src: track.thumbnail || '/img/pck-512.png', sizes: '512x512', type: 'image/png' }
+                    { src: squareThumb || '/img/pck-192.png', sizes: '192x192', type: 'image/jpeg' },
+                    { src: squareThumb || '/img/pck-512.png', sizes: '512x512', type: 'image/jpeg' }
                 ]
             });
             
@@ -666,17 +801,29 @@
             navigator.mediaSession.setActionHandler('stop', () => {
                 stopPlayback();
             });
+
+            navigator.mediaSession.setActionHandler('seekto', (details) => {
+                console.log('Media Session seekto:', details);
+                if (details.seekTime !== undefined && currentGuildId) {
+                    seekTo(details.seekTime);
+                }
+            });
             
             // Update playback state
             navigator.mediaSession.playbackState = isPaused ? 'paused' : 'playing';
             
             // Update position state for scrubber
+            // Only update if we have valid duration
             if ('setPositionState' in navigator.mediaSession && currentTrackDuration > 0) {
-                navigator.mediaSession.setPositionState({
-                    duration: currentTrackDuration,
-                    playbackRate: 1,
-                    position: Math.min(currentTrackProgress, currentTrackDuration)
-                });
+                try {
+                    navigator.mediaSession.setPositionState({
+                        duration: currentTrackDuration,
+                        playbackRate: 1,
+                        position: Math.min(currentTrackProgress, currentTrackDuration)
+                    });
+                } catch (e) {
+                    console.log('setPositionState failed:', e);
+                }
             }
         }
 
@@ -892,7 +1039,13 @@
             document.getElementById('np-requestedby').textContent = `Requested by ${track.requestedBy}`;
             document.getElementById('np-duration').textContent = formatDuration(track.duration);
 
-            currentTrackProgress = track.progress || 0;
+            // Use the progress from the server, but don't jump backwards if we're just a second or two ahead
+            // This prevents the progress bar from stuttering due to network latency
+            const serverProgress = track.progress || 0;
+            if (Math.abs(serverProgress - currentTrackProgress) > 2 || currentTrackProgress === 0) {
+                currentTrackProgress = serverProgress;
+            }
+            
             currentTrackDuration = track.duration || 0;
             isPaused = data.paused || false;
             
@@ -921,6 +1074,19 @@
             
             document.getElementById('np-progress').style.width = `${percentage}%`;
             document.getElementById('np-current').textContent = formatDuration(currentTrackProgress);
+
+            // Update lock screen progress
+            if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && currentTrackDuration > 0) {
+                try {
+                    navigator.mediaSession.setPositionState({
+                        duration: currentTrackDuration,
+                        playbackRate: isPaused ? 0 : 1,
+                        position: Math.min(currentTrackProgress, currentTrackDuration)
+                    });
+                } catch (e) {
+                    // Ignore errors (can happen if audio is not playing yet)
+                }
+            }
         }
 
         function showEmptyState() {
