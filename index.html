@@ -44,8 +44,8 @@
                 <img class="user-avatar" id="mobile-user-avatar" alt="Avatar">
                 <span id="mobile-user-name"></span>
             </div>
-            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings">⚙️ Settings</a>
-            <a href="#" class="mobile-nav-item" id="mobile-logout">🚪 Logout</a>
+            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings"><svg class="nav-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Settings</a>
+            <a href="#" class="mobile-nav-item" id="mobile-logout"><svg class="nav-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14l5-5-5-5m5 5H9"/></svg>Logout</a>
             <a href="#" class="mobile-login-btn" id="mobile-login">Login with Discord</a>
         </div>
         <div class="nav-auth" id="nav-auth">
@@ -113,85 +113,6 @@
             </section>
         </div>
     </main>
-
-    <script type="x-shader/x-fragment" id="vertShader">
-        precision mediump float;
-        varying vec2 vUv;
-        attribute vec2 a_position;
-
-        void main() {
-            vUv = .5 * (a_position + 1.);
-            gl_Position = vec4(a_position, 0.0, 1.0);
-        }
-    </script>
-
-    <script type="x-shader/x-fragment" id="fragShader">
-        precision mediump float;
-    
-        varying vec2 vUv;
-        uniform float u_time;
-        uniform float u_ratio;
-        uniform vec2 u_pointer_position;
-        uniform float u_scroll_progress;
-    
-        vec2 rotate(vec2 uv, float th) {
-            return mat2(cos(th), sin(th), -sin(th), cos(th)) * uv;
-        }
-    
-        float neuro_shape(vec2 uv, float t, float p) {
-            vec2 sine_acc = vec2(0.);
-            vec2 res = vec2(0.);
-            float scale = 8.;
-    
-            for (int j = 0; j < 15; j++) {
-                uv = rotate(uv, 1.);
-                sine_acc = rotate(sine_acc, 1.);
-                vec2 layer = uv * scale + float(j) + sine_acc - t;
-                sine_acc += sin(layer);
-                res += (.5 + .5 * cos(layer)) / scale;
-                scale *= (1.2 - .07 * p);
-            }
-            return res.x + res.y;
-        }
-    
-        void main() {
-            vec2 uv = .5 * vUv;
-            uv.x *= u_ratio;
-    
-            vec2 pointer = vUv - u_pointer_position;
-            pointer.x *= u_ratio;
-            float p = clamp(length(pointer), 0., 1.);
-            p = .5 * pow(1. - p, 2.);
-    
-            float t = .001 * u_time;
-    
-            float noise = neuro_shape(uv, t, p);
-    
-            noise = 1.2 * pow(noise, 3.);
-            noise += pow(noise, 10.);
-            noise = max(.0, noise - .42);
-            noise *= (1. - length(vUv - .5));
-            noise = clamp(noise * 1.35, 0., 1.);
-    
-            // Teal/orange bias to match site theme (reduce purple/pink dominance).
-            vec3 cool = vec3(0.0, 0.627, 0.855);   // #00a0da
-            vec3 warm = vec3(1.0, 0.46, 0.10);     // neon orange (less pink)
-
-            float n = noise;
-            float warmMask = smoothstep(0.14, 0.78, n);
-            float sweep = 0.5 + 0.5 * sin((vUv.x * 5.2) + (vUv.y * 2.1) + (t * 2.2));
-            float warmMix = warmMask * (0.18 + 0.62 * sweep);
-            warmMix *= (0.22 + 0.78 * p);
-            vec3 color = mix(cool, warm, warmMix);
-
-            color = color * n;
-            color += cool * pow(n, 2.4) * 0.07;
-            color += warm * pow(n, 2.1) * 0.08;
-     
-            gl_FragColor = vec4(color, noise);
-        }
-    </script>
-    
 
     <script type="module" src="/main.js"></script>
     <script type="module" src="/logo3d.js"></script>

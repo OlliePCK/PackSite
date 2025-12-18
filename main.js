@@ -55,28 +55,24 @@ void main() {
 
     noise = 1.2 * pow(noise, 3.);
     noise += pow(noise, 10.);
-    noise = max(.0, noise - .38);
-    noise *= (1. - length(vUv - .5) * 0.8);
-    noise = clamp(noise * 1.6, 0., 1.);
+    noise = max(.0, noise - .42);
+    noise *= (1. - length(vUv - .5));
+    noise = clamp(noise * 1.35, 0., 1.);
 
-    // Cyan Glow #00A0DA = vec3(0.0, 0.627, 0.855)
-    // Ice Blue #9FE8FF = vec3(0.624, 0.91, 1.0)
-    // Hot Red #FE3C2F = vec3(0.996, 0.235, 0.184)
-    vec3 cyan = vec3(0.0, 0.627, 0.855);
-    vec3 ice = vec3(0.624, 0.91, 1.0);
-    vec3 hot = vec3(0.996, 0.235, 0.184);
+    // Teal/orange bias to match site theme (reduce purple/pink dominance).
+    vec3 cool = vec3(0.0, 0.627, 0.855);   // #00a0da
+    vec3 warm = vec3(1.0, 0.46, 0.10);     // neon orange (less pink)
 
     float n = noise;
-    // Mix from cyan base to hot red at peaks
-    float hotMix = smoothstep(0.15, 0.55, n) * 0.45;
-    hotMix *= (0.4 + 0.6 * p);
-    vec3 color = mix(cyan, hot, hotMix);
-    // Add ice highlights at bright spots
-    color = mix(color, ice, smoothstep(0.5, 0.9, n) * 0.3);
+    float warmMask = smoothstep(0.14, 0.78, n);
+    float sweep = 0.5 + 0.5 * sin((vUv.x * 5.2) + (vUv.y * 2.1) + (t * 2.2));
+    float warmMix = warmMask * (0.18 + 0.62 * sweep);
+    warmMix *= (0.22 + 0.78 * p);
+    vec3 color = mix(cool, warm, warmMix);
 
-    color = color * n * 1.4;
-    color += hot * pow(n, 2.5) * 0.12;
-    color += cyan * pow(n, 1.5) * 0.08;
+    color = color * n;
+    color += cool * pow(n, 2.4) * 0.07;
+    color += warm * pow(n, 2.1) * 0.08;
 
     gl_FragColor = vec4(color, noise);
 }

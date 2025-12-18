@@ -374,6 +374,7 @@ function addPointerEvents() {
   const wrap = canvas.parentElement;
   if (!wrap) return;
 
+  // Handle pointer/mouse movement
   wrap.addEventListener('pointermove', (e) => {
     const rect = wrap.getBoundingClientRect();
     const nx = (e.clientX - rect.left) / rect.width - 0.5;
@@ -382,6 +383,29 @@ function addPointerEvents() {
   });
 
   wrap.addEventListener('pointerleave', () => {
+    targetRotation.set(0, 0);
+  });
+
+  // Touch events for iOS - prevent default to stop text selection
+  wrap.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+  }, { passive: false });
+
+  wrap.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!e.touches.length) return;
+    const touch = e.touches[0];
+    const rect = wrap.getBoundingClientRect();
+    const nx = (touch.clientX - rect.left) / rect.width - 0.5;
+    const ny = (touch.clientY - rect.top) / rect.height - 0.5;
+    targetRotation.set(ny * 0.35, nx * 0.45);
+  }, { passive: false });
+
+  wrap.addEventListener('touchend', () => {
+    targetRotation.set(0, 0);
+  });
+
+  wrap.addEventListener('touchcancel', () => {
     targetRotation.set(0, 0);
   });
 }

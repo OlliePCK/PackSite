@@ -23,10 +23,13 @@
         }
 
         .setting-item {
-            background: var(--bg-card);
+            background: var(--glass-panel-bg);
             border-radius: 12px;
             padding: 20px;
-            border: 1px solid var(--border-color);
+            border: 1px solid rgba(var(--primary-rgb), 0.14);
+            box-shadow: var(--panel-shadow);
+            backdrop-filter: blur(14px) saturate(1.1);
+            -webkit-backdrop-filter: blur(14px) saturate(1.1);
         }
 
         .setting-label {
@@ -164,8 +167,8 @@
             display: block;
         }
     </style>
-  <script type="module" crossorigin src="/assets/main-Clcqw10a.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/main-CIuxP9Vf.css">
+  <script type="module" crossorigin src="/assets/main-Dw8gu_xO.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/main-DYIO5ASY.css">
 </head>
 
 <body>
@@ -196,8 +199,8 @@
                 <img class="user-avatar" id="mobile-user-avatar" alt="Avatar">
                 <span id="mobile-user-name"></span>
             </div>
-            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings">⚙️ Settings</a>
-            <a href="#" class="mobile-nav-item" id="mobile-logout">🚪 Logout</a>
+            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings"><svg class="nav-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Settings</a>
+            <a href="#" class="mobile-nav-item" id="mobile-logout"><svg class="nav-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14l5-5-5-5m5 5H9"/></svg>Logout</a>
             <a href="#" class="mobile-login-btn" id="mobile-login">Login with Discord</a>
         </div>
         <div class="nav-auth" id="nav-auth">

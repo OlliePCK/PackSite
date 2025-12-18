@@ -23,14 +23,19 @@
             gap: 12px;
             padding: 10px;
             margin-bottom: 8px;
-            background: var(--bg-dark);
+            background: var(--surface-item-bg);
+            border: 1px solid var(--surface-item-border);
             border-radius: 8px;
-            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+            box-shadow: var(--surface-item-shadow);
+            backdrop-filter: var(--surface-item-backdrop);
+            -webkit-backdrop-filter: var(--surface-item-backdrop);
+            transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
             cursor: grab;
             user-select: none;
         }
         .queue-item:hover {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--surface-item-hover-bg);
+            border-color: rgba(var(--primary-rgb), 0.18);
         }
         .queue-item.dragging {
             opacity: 0.8;
@@ -135,28 +140,35 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
             margin-top: 20px;
-            padding-top: 15px;
+            padding-top: 20px;
             border-top: 1px solid var(--border-color);
         }
         .control-btn {
-            width: 48px;
-            height: 48px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
-            border: none;
-            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             color: var(--text-primary);
-            font-size: 20px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        .control-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
         }
         .control-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.08);
         }
         .control-btn:active {
             transform: scale(0.95);
@@ -165,26 +177,35 @@
             width: 56px;
             height: 56px;
             background: var(--primary);
-            font-size: 24px;
+            border-color: var(--primary);
+            box-shadow: 0 4px 20px rgba(var(--primary-rgb), 0.4);
+        }
+        .control-btn.primary svg {
+            width: 24px;
+            height: 24px;
         }
         .control-btn.primary:hover {
             background: var(--primary);
             filter: brightness(1.2);
+            box-shadow: 0 6px 25px rgba(var(--primary-rgb), 0.5);
         }
         .control-btn:disabled {
-            opacity: 0.4;
+            opacity: 0.35;
             cursor: not-allowed;
         }
         .control-btn:disabled:hover {
             transform: none;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
         }
         .control-btn.stop {
-            background: rgba(255, 0, 0, 0.2);
-            color: #ff6b6b;
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
         }
         .control-btn.stop:hover {
-            background: rgba(255, 0, 0, 0.3);
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.4);
         }
     </style>
 </head>
@@ -192,7 +213,8 @@
 <body>
     <!-- Hidden audio element for Media Session API (required for iOS/Android lock screen controls) -->
     <!-- Using a 10-minute silent MP3 for iOS compatibility (Web Audio API doesn't work for Media Session on iOS) -->
-    <audio id="media-session-audio" loop playsinline style="opacity: 0; position: absolute; pointer-events: none; width: 1px; height: 1px; top: 0; left: 0;">
+    <!-- NOTE: iOS requires muted=false for Media Session - the file must be truly silent! -->
+    <audio id="media-session-audio" loop playsinline preload="auto" style="opacity: 0; position: absolute; pointer-events: none; width: 1px; height: 1px; top: 0; left: 0;">
         <source src="/silence-10min.mp3" type="audio/mpeg">
     </audio>
     
@@ -223,8 +245,8 @@
                 <img class="user-avatar" id="mobile-user-avatar" alt="Avatar">
                 <span id="mobile-user-name"></span>
             </div>
-            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings">⚙️ Settings</a>
-            <a href="#" class="mobile-nav-item" id="mobile-logout">🚪 Logout</a>
+            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings"><svg class="nav-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Settings</a>
+            <a href="#" class="mobile-nav-item" id="mobile-logout"><svg class="nav-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14l5-5-5-5m5 5H9"/></svg>Logout</a>
             <a href="#" class="mobile-login-btn" id="mobile-login">Login with Discord</a>
         </div>
         <div class="nav-auth" id="nav-auth">
@@ -294,10 +316,18 @@
                         
                         <!-- Player Controls -->
                         <div class="player-controls">
-                            <button class="control-btn stop" id="btn-stop" title="Stop">⏹</button>
-                            <button class="control-btn" id="btn-previous" title="Previous">⏮</button>
-                            <button class="control-btn primary" id="btn-playpause" title="Play/Pause">⏸</button>
-                            <button class="control-btn" id="btn-skip" title="Skip">⏭</button>
+                            <button class="control-btn stop" id="btn-stop" title="Stop">
+                                <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                            </button>
+                            <button class="control-btn" id="btn-previous" title="Previous">
+                                <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                            </button>
+                            <button class="control-btn primary" id="btn-playpause" title="Play/Pause">
+                                <svg viewBox="0 0 24 24" id="playpause-icon"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                            </button>
+                            <button class="control-btn" id="btn-skip" title="Skip">
+                                <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -339,80 +369,6 @@
         </div>
     </div>
 
-    <script type="x-shader/x-fragment" id="vertShader">
-        precision mediump float;
-        varying vec2 vUv;
-        attribute vec2 a_position;
-
-        void main() {
-            vUv = .5 * (a_position + 1.);
-            gl_Position = vec4(a_position, 0.0, 1.0);
-        }
-    </script>
-
-    <script type="x-shader/x-fragment" id="fragShader">
-        precision mediump float;
-    
-        varying vec2 vUv;
-        uniform float u_time;
-        uniform float u_ratio;
-        uniform vec2 u_pointer_position;
-        uniform float u_scroll_progress;
-    
-        vec2 rotate(vec2 uv, float th) {
-            return mat2(cos(th), sin(th), -sin(th), cos(th)) * uv;
-        }
-    
-        float neuro_shape(vec2 uv, float t, float p) {
-            vec2 sine_acc = vec2(0.);
-            vec2 res = vec2(0.);
-            float scale = 8.;
-    
-            for (int j = 0; j < 15; j++) {
-                uv = rotate(uv, 1.);
-                sine_acc = rotate(sine_acc, 1.);
-                vec2 layer = uv * scale + float(j) + sine_acc - t;
-                sine_acc += sin(layer);
-                res += (.5 + .5 * cos(layer)) / scale;
-                scale *= (1.2 - .07 * p);
-            }
-            return res.x + res.y;
-        }
-    
-        void main() {
-            vec2 uv = .5 * vUv;
-            uv.x *= u_ratio;
-    
-            vec2 pointer = vUv - u_pointer_position;
-            pointer.x *= u_ratio;
-            float p = clamp(length(pointer), 0., 1.);
-            p = .5 * pow(1. - p, 2.);
-    
-            float t = .001 * u_time;
-    
-            float noise = neuro_shape(uv, t, p);
-    
-            noise = 1.2 * pow(noise, 3.);
-            noise += pow(noise, 10.);
-            noise = max(.0, noise - .42);
-            noise *= (1. - length(vUv - .5));
-            noise = clamp(noise * 1.35, 0., 1.);
-
-            vec3 cool = vec3(0.078,0.149,0.259);
-            vec3 warm = vec3(0.996,0.235,0.184);
-
-            float n = noise;
-            float warmMix = smoothstep(0.08, 0.40, n) * 0.30;
-            warmMix *= (0.35 + 0.65 * p);
-            vec3 color = mix(cool, warm, warmMix);
-
-            color = color * n;
-            color += warm * pow(n, 2.2) * 0.06;
-     
-            gl_FragColor = vec4(color, noise);
-        }
-    </script>
-
     <script type="module" src="/main.js"></script>
     <script src="/api.js?v=4"></script>
     <script>
@@ -426,6 +382,42 @@
         let currentTrackData = null;
         let audioUnlocked = false;
 
+        function setMediaSessionAudioPlaying(shouldPlay) {
+            const audio = document.getElementById('media-session-audio');
+            if (!audio) return;
+            
+            // If audio isn't unlocked yet, we can't play - but remember the request
+            // The unlock handler will check currentTrackData and start if needed
+            if (!audioUnlocked) {
+                console.log('Audio not unlocked yet, waiting for user interaction');
+                return;
+            }
+
+            // IMPORTANT: iOS requires muted=false for Media Session to work!
+            // Using a truly silent MP3 file, so this won't produce sound
+            audio.muted = false;
+            audio.volume = 0.01; // Tiny volume - iOS ignores muted audio for Media Session
+
+            // Ensure audio has a valid source (iOS can sometimes drop currentSrc)
+            if (!audio.currentSrc && audio.querySelector('source')) {
+                audio.load();
+            }
+
+            if (shouldPlay) {
+                if (audio.paused) {
+                    console.log('Starting Media Session audio playback');
+                    audio.play().catch((e) => console.log('Media Session audio play failed:', e));
+                }
+            } else {
+                audio.pause();
+                try {
+                    audio.currentTime = 0;
+                } catch {
+                    // Ignore (can throw if not yet loaded)
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             // Unlock audio on first interaction (required for iOS Media Session)
             const unlockAudio = async () => {
@@ -435,7 +427,12 @@
                 if (!audio) return;
 
                 try {
+                    // IMPORTANT: iOS requires muted=false for Media Session!
+                    // The MP3 file is silent, so no sound will play
+                    audio.muted = false;
+                    audio.volume = 0.01; // Tiny volume - iOS ignores muted audio
                     await audio.play();
+                    // Don't pause - keep it playing if we have a track!
                     audioUnlocked = true;
                     console.log('Audio unlocked for Media Session');
                     
@@ -443,6 +440,16 @@
                     document.removeEventListener('click', unlockAudio);
                     document.removeEventListener('touchstart', unlockAudio);
                     document.removeEventListener('keydown', unlockAudio);
+                    
+                    // If we already have track data and it's playing, update media session now
+                    if (currentTrackData && !isPaused) {
+                        console.log('Track already playing, activating Media Session');
+                        updateMediaSession(currentTrackData);
+                    } else {
+                        // No track playing yet, pause the audio until we need it
+                        audio.pause();
+                        try { audio.currentTime = 0; } catch {}
+                    }
                 } catch (e) {
                     console.log('Audio play failed:', e);
                 }
@@ -560,16 +567,73 @@
 
         function setupProgressBar() {
             const progressBar = document.querySelector('.progress-bar');
+            const progressFill = document.getElementById('np-progress');
+            const currentTimeEl = document.getElementById('np-current');
+            let isDragging = false;
             
-            progressBar.addEventListener('click', (e) => {
-                if (!currentTrackDuration) return;
-                
+            // Helper to calculate seek time from position
+            function getSeekTimeFromEvent(e) {
                 const rect = progressBar.getBoundingClientRect();
-                const x = e.clientX - rect.left;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const x = clientX - rect.left;
+                const percentage = Math.max(0, Math.min(1, x / rect.width));
+                return Math.floor(percentage * currentTrackDuration);
+            }
+            
+            // Helper to update visual progress without seeking
+            function updateVisualProgress(time) {
+                if (!currentTrackDuration) return;
+                const percentage = (time / currentTrackDuration) * 100;
+                progressFill.style.width = `${percentage}%`;
+                currentTimeEl.textContent = formatDuration(time);
+            }
+            
+            // Click/tap to seek
+            progressBar.addEventListener('click', (e) => {
+                if (!currentTrackDuration || isDragging) return;
+                seekTo(getSeekTimeFromEvent(e));
+            });
+            
+            // Touch drag for iOS
+            progressBar.addEventListener('touchstart', (e) => {
+                if (!currentTrackDuration) return;
+                isDragging = true;
+                progressBar.classList.add('dragging');
+                // Prevent scrolling while dragging
+                e.preventDefault();
+                // Visual feedback immediately
+                const time = getSeekTimeFromEvent(e);
+                updateVisualProgress(time);
+            }, { passive: false });
+            
+            progressBar.addEventListener('touchmove', (e) => {
+                if (!isDragging || !currentTrackDuration) return;
+                e.preventDefault();
+                // Update visual progress as user drags
+                const time = getSeekTimeFromEvent(e);
+                updateVisualProgress(time);
+            }, { passive: false });
+            
+            progressBar.addEventListener('touchend', (e) => {
+                if (!isDragging || !currentTrackDuration) return;
+                isDragging = false;
+                progressBar.classList.remove('dragging');
+                // Get final position from changedTouches (touchend doesn't have touches)
+                const rect = progressBar.getBoundingClientRect();
+                const clientX = e.changedTouches[0].clientX;
+                const x = clientX - rect.left;
                 const percentage = Math.max(0, Math.min(1, x / rect.width));
                 const seekTime = Math.floor(percentage * currentTrackDuration);
-                
+                // Actually seek
                 seekTo(seekTime);
+            });
+            
+            progressBar.addEventListener('touchcancel', () => {
+                if (!isDragging) return;
+                isDragging = false;
+                progressBar.classList.remove('dragging');
+                // Reset to actual position
+                updateVisualProgress(currentTrackProgress);
             });
             
             // Add cursor pointer to show it's clickable
@@ -624,8 +688,7 @@
             if (!currentGuildId) return;
             
             // Ensure Media Session audio is active
-            const audio = document.getElementById('media-session-audio');
-            if (audio && audio.paused) audio.play().catch(() => {});
+            setMediaSessionAudioPlaying(true);
 
             const btn = document.getElementById('btn-playpause');
             btn.disabled = true;
@@ -654,8 +717,7 @@
             if (!currentGuildId) return;
             
             // Ensure Media Session audio is active
-            const audio = document.getElementById('media-session-audio');
-            if (audio && audio.paused) audio.play().catch(() => {});
+            setMediaSessionAudioPlaying(true);
 
             const btn = document.getElementById('btn-skip');
             btn.disabled = true;
@@ -674,8 +736,7 @@
             if (!currentGuildId) return;
             
             // Ensure Media Session audio is active
-            const audio = document.getElementById('media-session-audio');
-            if (audio && audio.paused) audio.play().catch(() => {});
+            setMediaSessionAudioPlaying(true);
 
             const btn = document.getElementById('btn-previous');
             btn.disabled = true;
@@ -699,8 +760,7 @@
             if (!confirm('Stop playback and clear the queue?')) return;
             
             // Ensure Media Session audio is active (so we can clear it properly if needed)
-            const audio = document.getElementById('media-session-audio');
-            if (audio && audio.paused) audio.play().catch(() => {});
+            setMediaSessionAudioPlaying(true);
 
             const btn = document.getElementById('btn-stop');
             btn.disabled = true;
@@ -717,7 +777,13 @@
 
         function updatePlayPauseButton() {
             const btn = document.getElementById('btn-playpause');
-            btn.textContent = isPaused ? '▶' : '⏸';
+            const icon = btn.querySelector('svg');
+            // Play icon (triangle) when paused, Pause icon (two bars) when playing
+            if (isPaused) {
+                icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+            } else {
+                icon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+            }
             btn.title = isPaused ? 'Play' : 'Pause';
         }
 
@@ -754,19 +820,9 @@
             if (!('mediaSession' in navigator)) return;
             
             currentTrackData = track;
-            
-            // Ensure audio is playing (if unlocked)
-            const audio = document.getElementById('media-session-audio');
-            if (audio && audioUnlocked) {
-                if (audio.paused) {
-                    audio.play().catch(e => console.log('Media Session audio play failed:', e));
-                }
-                // Make sure audio has a valid source
-                if (!audio.src && audio.querySelector('source')) {
-                    audio.load();
-                    audio.play().catch(e => console.log('Media Session audio reload failed:', e));
-                }
-            }
+
+            // Only keep the silent audio playing while we're actually "playing"
+            setMediaSessionAudioPlaying(!isPaused);
             
             // Use square-ish thumbnail for lock screen (sddefault is 640x480 vs maxresdefault 1280x720)
             const squareThumb = getSquareThumbnail(track.thumbnail);
@@ -829,11 +885,8 @@
 
         function clearMediaSession() {
             if (!('mediaSession' in navigator)) return;
-            
-            const audio = document.getElementById('media-session-audio');
-            if (audio) {
-                audio.pause();
-            }
+
+            setMediaSessionAudioPlaying(false);
             
             navigator.mediaSession.metadata = null;
             navigator.mediaSession.playbackState = 'none';
@@ -1033,6 +1086,10 @@
             document.getElementById('empty-state').classList.add('hidden');
 
             const track = data.track;
+            
+            // Save track data immediately so it's available for unlock handler
+            currentTrackData = track;
+            
             document.getElementById('np-thumbnail').src = track.thumbnail || '/img/default-album.png';
             document.getElementById('np-title').textContent = track.title;
             document.getElementById('np-artist').textContent = track.artist || 'Unknown Artist';

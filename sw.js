@@ -1,5 +1,5 @@
 /**
- * The Pack - Service Worker (v2)
+ * The Pack - Service Worker (v3)
  *
  * This site is built by Vite and uses hashed assets under /assets/.
  * The old SW (v1) precached legacy paths (/main.js, /nav.js, /styles.css, /the-pack/*)
@@ -11,7 +11,7 @@
  * - Never cache HTML responses as assets
  */
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const HTML_CACHE = `the-pack-html-${CACHE_VERSION}`;
 const ASSET_CACHE = `the-pack-assets-${CACHE_VERSION}`;
 
@@ -47,16 +47,17 @@ self.addEventListener('fetch', (event) => {
     if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
         event.respondWith(
             (async () => {
+                const cacheKey = url.pathname === '/' ? '/index.html' : url.pathname;
                 try {
-                    const fresh = await fetch(request);
+                    const fresh = await fetch(new Request(request, { cache: 'reload' }));
                     if (fresh && fresh.ok) {
                         const cache = await caches.open(HTML_CACHE);
-                        cache.put('/index.html', fresh.clone());
+                        cache.put(cacheKey, fresh.clone());
                     }
                     return fresh;
                 } catch {
                     const cache = await caches.open(HTML_CACHE);
-                    return (await cache.match('/index.html')) || Response.error();
+                    return (await cache.match(cacheKey)) || (await cache.match('/index.html')) || Response.error();
                 }
             })()
         );

@@ -14,8 +14,10 @@
     }
 
     function initNav() {
+        const MOBILE_NAV_BREAKPOINT = 1200;
         const hamburger = document.getElementById('hamburger');
         const navLinks = document.getElementById('nav-links');
+        const scrim = ensureNavScrim();
         
         // Mobile nav elements
         const mobileDivider = document.getElementById('mobile-divider');
@@ -32,6 +34,30 @@
         }
         
         console.log('Nav.js: Hamburger menu initialized');
+
+        const closeMenu = () => {
+            hamburger.classList.remove('active');
+            if (navLinks) navLinks.classList.remove('active');
+            scrim?.classList.remove('active');
+            document.documentElement.classList.remove('nav-open');
+            document.body.classList.remove('nav-open');
+        };
+
+        const toggleMenu = () => {
+            hamburger.classList.toggle('active');
+            if (navLinks) navLinks.classList.toggle('active');
+
+            const isOpen = hamburger.classList.contains('active') && navLinks?.classList.contains('active');
+            if (isOpen) {
+                scrim?.classList.add('active');
+                document.documentElement.classList.add('nav-open');
+                document.body.classList.add('nav-open');
+            } else {
+                closeMenu();
+            }
+        };
+
+        const isOverlayNav = () => window.matchMedia?.(`(max-width: ${MOBILE_NAV_BREAKPOINT}px)`)?.matches ?? (window.innerWidth <= MOBILE_NAV_BREAKPOINT);
         
         // Function to update mobile nav based on login state
         window.updateMobileNav = function(isLoggedIn, user) {
@@ -55,6 +81,22 @@
                 if (mobileLogin) mobileLogin.classList.add('visible');
             }
         };
+
+        // Default to logged-out state so the mobile menu always has a Login action,
+        // then try to hydrate with the real session state (api.js may not be loaded yet).
+        window.updateMobileNav(false, null);
+        fetch('/api/auth/me', { credentials: 'include' })
+            .then((r) => r.json())
+            .then((data) => {
+                if (data?.authenticated) {
+                    window.updateMobileNav(true, data);
+                } else {
+                    window.updateMobileNav(false, null);
+                }
+            })
+            .catch(() => {
+                // Keep default logged-out UI
+            });
         
         // Handle mobile login click
         if (mobileLogin) {
@@ -79,16 +121,22 @@
         hamburger.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            hamburger.classList.toggle('active');
-            if (navLinks) navLinks.classList.toggle('active');
+            toggleMenu();
         });
+
+        if (scrim) {
+            scrim.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeMenu();
+            });
+        }
         
         // Close menu when clicking a link
         if (navLinks) {
             navLinks.querySelectorAll('.nav-link, .mobile-nav-item, .mobile-login-btn').forEach(link => {
                 link.addEventListener('click', () => {
-                    hamburger.classList.remove('active');
-                    navLinks.classList.remove('active');
+                    closeMenu();
                 });
             });
         }
@@ -99,9 +147,18 @@
             const isNavLinks = navLinks && navLinks.contains(e.target);
             
             if (!isHamburger && !isNavLinks) {
-                hamburger.classList.remove('active');
-                if (navLinks) navLinks.classList.remove('active');
+                closeMenu();
             }
+        });
+
+        // Close menu with Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeMenu();
+        });
+
+        // Keep behavior sane when resizing across breakpoints
+        window.addEventListener('resize', () => {
+            if (!isOverlayNav()) closeMenu();
         });
 
         // Handle responsive text logo swap
@@ -132,5 +189,16 @@
         document.addEventListener('DOMContentLoaded', initNav);
     } else {
         initNav();
+    }
+
+    function ensureNavScrim() {
+        let scrim = document.getElementById('nav-scrim');
+        if (scrim) return scrim;
+
+        scrim = document.createElement('div');
+        scrim.id = 'nav-scrim';
+        scrim.className = 'nav-scrim';
+        document.body.appendChild(scrim);
+        return scrim;
     }
 })();

@@ -22,10 +22,14 @@
             margin-bottom: 25px;
         }
         .stat-box {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--surface-item-bg);
+            border: 1px solid var(--surface-item-border);
             border-radius: 10px;
             padding: 15px;
             text-align: center;
+            box-shadow: var(--surface-item-shadow);
+            backdrop-filter: var(--surface-item-backdrop);
+            -webkit-backdrop-filter: var(--surface-item-backdrop);
         }
         .stat-box-value {
             font-size: 1.8em;
@@ -42,13 +46,19 @@
             align-items: center;
             gap: 15px;
             padding: 12px;
-            background: rgba(255, 255, 255, 0.02);
+            background: var(--surface-item-bg);
+            border: 1px solid var(--surface-item-border);
             border-radius: 8px;
             margin-bottom: 8px;
-            transition: background 0.2s;
+            box-shadow: var(--surface-item-shadow);
+            backdrop-filter: var(--surface-item-backdrop);
+            -webkit-backdrop-filter: var(--surface-item-backdrop);
+            transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
         }
         .history-item:hover {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--surface-item-hover-bg);
+            border-color: rgba(var(--primary-rgb), 0.18);
+            transform: translateY(-1px);
         }
         .history-thumbnail {
             width: 50px;
@@ -85,9 +95,13 @@
             align-items: center;
             gap: 12px;
             padding: 10px;
-            background: rgba(255, 255, 255, 0.02);
+            background: var(--surface-item-bg);
+            border: 1px solid var(--surface-item-border);
             border-radius: 8px;
             margin-bottom: 8px;
+            box-shadow: var(--surface-item-shadow);
+            backdrop-filter: var(--surface-item-backdrop);
+            -webkit-backdrop-filter: var(--surface-item-backdrop);
         }
         .top-rank {
             width: 30px;
@@ -150,19 +164,25 @@
         }
         .tab {
             padding: 10px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: none;
+            background: var(--surface-item-bg);
+            border: 1px solid var(--surface-item-border);
             border-radius: 8px;
             color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.2s;
+            box-shadow: var(--surface-item-shadow);
+            backdrop-filter: var(--surface-item-backdrop);
+            -webkit-backdrop-filter: var(--surface-item-backdrop);
+            transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
         }
         .tab.active {
-            background: var(--primary);
+            background: var(--surface-tab-active-bg);
+            border-color: var(--surface-tab-active-border);
             color: white;
         }
         .tab:hover:not(.active) {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--surface-item-hover-bg);
+            border-color: rgba(var(--primary-rgb), 0.18);
+            transform: translateY(-1px);
         }
     </style>
 </head>
@@ -195,8 +215,8 @@
                 <img class="user-avatar" id="mobile-user-avatar" alt="Avatar">
                 <span id="mobile-user-name"></span>
             </div>
-            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings">⚙️ Settings</a>
-            <a href="#" class="mobile-nav-item" id="mobile-logout">🚪 Logout</a>
+            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings"><svg class="nav-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Settings</a>
+            <a href="#" class="mobile-nav-item" id="mobile-logout"><svg class="nav-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14l5-5-5-5m5 5H9"/></svg>Logout</a>
             <a href="#" class="mobile-login-btn" id="mobile-login">Login with Discord</a>
         </div>
         <div class="nav-auth" id="nav-auth">
