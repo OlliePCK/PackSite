@@ -4,10 +4,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Page Monitors - The Pack</title>
+    <title>Page Monitors - The Pack Discord Bot</title>
     <link rel="icon" type="image/svg+xml" href="/img/pck.svg?v=2">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#00a0da">
+    <link rel="canonical" href="https://thepck.com/monitors.html">
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Monitor websites for changes with The Pack Discord bot. Get instant Discord notifications when pages update - perfect for tracking restocks, news, and more.">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://thepck.com/monitors.html">
+    <meta property="og:title" content="Page Monitors - The Pack Discord Bot">
+    <meta property="og:description" content="Monitor websites for changes with The Pack Discord bot. Get instant Discord notifications when pages update.">
+    <meta property="og:image" content="https://thepck.com/img/og-image.png">
+    <meta property="og:site_name" content="The Pack">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@ThePack">
+    <meta name="twitter:title" content="Page Monitors - The Pack Discord Bot">
+    <meta name="twitter:description" content="Monitor websites for changes with The Pack Discord bot. Get instant Discord notifications when pages update.">
+    <meta name="twitter:image" content="https://thepck.com/img/og-image.png">
+    
+    <!-- Apple Mobile -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="The Pack">
@@ -311,6 +333,115 @@
             justify-content: flex-end;
             margin-top: 20px;
         }
+
+        .modal-wide {
+            max-width: 760px;
+        }
+
+        .modal-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: -12px;
+            margin-bottom: 16px;
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .diff-results {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .diff-item {
+            border: 1px solid var(--border-color);
+            background: var(--surface-item-bg);
+            border-radius: 8px;
+            padding: 10px 12px;
+            box-shadow: var(--surface-item-shadow);
+            backdrop-filter: var(--surface-item-backdrop);
+            -webkit-backdrop-filter: var(--surface-item-backdrop);
+        }
+
+        .diff-item.added {
+            border-color: rgba(0, 255, 100, 0.6);
+        }
+
+        .diff-item.removed {
+            border-color: rgba(255, 68, 68, 0.6);
+        }
+
+        .diff-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .diff-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 10px;
+            font-size: 0.75rem;
+        }
+
+        .inline-input {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .ignore-lists {
+            display: grid;
+            gap: 12px;
+        }
+
+        .ignore-list-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .ignore-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .ignore-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 10px;
+            background: var(--surface-item-bg);
+            border: 1px solid var(--surface-item-border);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .ignore-remove {
+            border: none;
+            background: transparent;
+            color: #ff6666;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
     </style>
 </head>
 
@@ -538,6 +669,56 @@
         </div>
     </div>
 
+    <!-- Diff & Ignore Modal -->
+    <div class="modal-overlay" id="diff-modal">
+        <div class="modal modal-wide">
+            <h2 class="modal-title">Diff & Ignore</h2>
+            <div class="modal-subtitle" id="diff-monitor-name"></div>
+            <div class="modal-section">
+                <div class="section-header">
+                    <h3 class="card-title" style="margin: 0;">Latest Diff</h3>
+                    <button id="diff-run-btn" class="btn btn-secondary btn-small">Run Diff</button>
+                </div>
+                <div id="diff-status" class="test-result" style="display: none;"></div>
+                <div id="diff-results" class="diff-results"></div>
+            </div>
+            <div class="modal-section">
+                <h3 class="card-title" style="margin-bottom: 10px;">Ignore Rules</h3>
+                <div class="form-grid" style="grid-template-columns: 1fr;">
+                    <div class="form-group">
+                        <label class="form-label">Ignore Block Hash Prefix</label>
+                        <div class="inline-input">
+                            <input type="text" id="ignore-block-input" class="form-input" placeholder="e.g. 1a2b3c4d">
+                            <button id="ignore-block-add-btn" class="btn btn-secondary btn-small">Add</button>
+                        </div>
+                        <span class="form-hint">Use the [hash] shown in diff entries.</span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ignore Pattern (regex)</label>
+                        <div class="inline-input">
+                            <input type="text" id="ignore-pattern-input" class="form-input" placeholder="e.g. newsletter|cookie">
+                            <button id="ignore-pattern-add-btn" class="btn btn-secondary btn-small">Add</button>
+                        </div>
+                        <span class="form-hint">Matched against change text/snippets (case-insensitive).</span>
+                    </div>
+                </div>
+                <div class="ignore-lists">
+                    <div>
+                        <div class="ignore-list-title">Block Hash Prefixes</div>
+                        <div id="ignore-block-list" class="ignore-tags"></div>
+                    </div>
+                    <div>
+                        <div class="ignore-list-title">Patterns</div>
+                        <div id="ignore-pattern-list" class="ignore-tags"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="diff-close-btn" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="/main.js"></script>
     <script src="/api.js?v=2"></script>
     <script>
@@ -546,6 +727,7 @@
         let availableChannels = [];
         let availableRoles = [];
         let editingMonitorId = null;
+        let activeDiffMonitorId = null;
         let guildsData = null;
         let isCurrentGuildAdmin = false;
         let favoriteGuildId = null;
@@ -805,6 +987,7 @@
                 ${isCurrentGuildAdmin ? `
                 <div class="monitor-actions">
                     <button class="btn btn-secondary" onclick="testMonitor(${monitor.id})">🔍 Test</button>
+                    <button class="btn btn-secondary" onclick="openDiffModal(${monitor.id})">Diff</button>
                     <button class="btn btn-secondary" onclick="editMonitor(${monitor.id})">✏️ Edit</button>
                     ${monitor.isActive 
                         ? `<button class="btn btn-warning" onclick="toggleMonitor(${monitor.id}, false)">⏸️ Pause</button>`
@@ -947,6 +1130,284 @@
             setTimeout(() => {
                 resultEl.style.display = 'none';
             }, 10000);
+        }
+
+        function getMonitorById(monitorId) {
+            return monitors.find(m => m.id === monitorId);
+        }
+
+        function parseAlertSettings(monitor) {
+            if (!monitor || monitor.alertSettings == null) return {};
+            if (typeof monitor.alertSettings === 'object') {
+                return { ...monitor.alertSettings };
+            }
+            try {
+                return JSON.parse(monitor.alertSettings);
+            } catch {
+                return {};
+            }
+        }
+
+        function normalizeBlockPrefix(value) {
+            return (value || '')
+                .toLowerCase()
+                .replace(/[^a-f0-9]/g, '')
+                .slice(0, 40);
+        }
+
+        function setDiffStatus(message, kind) {
+            const statusEl = document.getElementById('diff-status');
+            if (!message) {
+                statusEl.style.display = 'none';
+                return;
+            }
+            statusEl.style.display = 'block';
+            statusEl.className = 'test-result' + (kind ? ` ${kind}` : '');
+            statusEl.textContent = message;
+        }
+
+        function renderIgnoreLists(monitor) {
+            const settings = parseAlertSettings(monitor);
+            const blockPrefixes = Array.isArray(settings.ignoreBlockHashPrefixes) ? settings.ignoreBlockHashPrefixes : [];
+            const patterns = Array.isArray(settings.ignorePatterns) ? settings.ignorePatterns : [];
+
+            const blockList = document.getElementById('ignore-block-list');
+            const patternList = document.getElementById('ignore-pattern-list');
+            blockList.innerHTML = '';
+            patternList.innerHTML = '';
+
+            if (blockPrefixes.length === 0) {
+                const empty = document.createElement('span');
+                empty.className = 'keyword-tag';
+                empty.textContent = 'None';
+                blockList.appendChild(empty);
+            } else {
+                blockPrefixes.forEach(prefix => {
+                    const tag = document.createElement('div');
+                    tag.className = 'ignore-tag';
+                    const code = document.createElement('code');
+                    code.textContent = prefix;
+                    const btn = document.createElement('button');
+                    btn.className = 'ignore-remove';
+                    btn.textContent = 'Remove';
+                    btn.addEventListener('click', () => removeIgnoreBlock(prefix));
+                    tag.appendChild(code);
+                    tag.appendChild(btn);
+                    blockList.appendChild(tag);
+                });
+            }
+
+            if (patterns.length === 0) {
+                const empty = document.createElement('span');
+                empty.className = 'keyword-tag';
+                empty.textContent = 'None';
+                patternList.appendChild(empty);
+            } else {
+                patterns.forEach(pattern => {
+                    const tag = document.createElement('div');
+                    tag.className = 'ignore-tag';
+                    const code = document.createElement('code');
+                    code.textContent = pattern;
+                    const btn = document.createElement('button');
+                    btn.className = 'ignore-remove';
+                    btn.textContent = 'Remove';
+                    btn.addEventListener('click', () => removeIgnorePattern(pattern));
+                    tag.appendChild(code);
+                    tag.appendChild(btn);
+                    patternList.appendChild(tag);
+                });
+            }
+        }
+
+        async function saveAlertSettings(monitorId, settings) {
+            const response = await fetch(`/api/monitors/${currentGuildId}/${monitorId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ alertSettings: settings })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to update ignore rules');
+            }
+
+            const monitor = getMonitorById(monitorId);
+            if (monitor) {
+                monitor.alertSettings = settings;
+            }
+        }
+
+        async function addIgnoreBlock(prefix) {
+            if (!activeDiffMonitorId) return;
+            const monitor = getMonitorById(activeDiffMonitorId);
+            if (!monitor) return;
+
+            const normalized = normalizeBlockPrefix(prefix);
+            if (!normalized || normalized.length < 6) {
+                alert('Block prefix must be at least 6 hex characters.');
+                return;
+            }
+
+            const settings = parseAlertSettings(monitor);
+            const existing = Array.isArray(settings.ignoreBlockHashPrefixes) ? settings.ignoreBlockHashPrefixes : [];
+            const next = Array.from(new Set([...existing, normalized]));
+            settings.ignoreBlockHashPrefixes = next;
+
+            await saveAlertSettings(activeDiffMonitorId, settings);
+            renderIgnoreLists(monitor);
+        }
+
+        async function addIgnorePattern(pattern) {
+            if (!activeDiffMonitorId) return;
+            const monitor = getMonitorById(activeDiffMonitorId);
+            if (!monitor) return;
+
+            const value = (pattern || '').trim();
+            if (!value) return;
+            try {
+                new RegExp(value, 'i');
+            } catch {
+                alert('Invalid regex pattern.');
+                return;
+            }
+
+            const settings = parseAlertSettings(monitor);
+            const existing = Array.isArray(settings.ignorePatterns) ? settings.ignorePatterns : [];
+            const next = Array.from(new Set([...existing, value]));
+            settings.ignorePatterns = next;
+
+            await saveAlertSettings(activeDiffMonitorId, settings);
+            renderIgnoreLists(monitor);
+        }
+
+        async function removeIgnoreBlock(prefix) {
+            if (!activeDiffMonitorId) return;
+            const monitor = getMonitorById(activeDiffMonitorId);
+            if (!monitor) return;
+
+            const settings = parseAlertSettings(monitor);
+            const existing = Array.isArray(settings.ignoreBlockHashPrefixes) ? settings.ignoreBlockHashPrefixes : [];
+            settings.ignoreBlockHashPrefixes = existing.filter(p => p !== prefix);
+
+            await saveAlertSettings(activeDiffMonitorId, settings);
+            renderIgnoreLists(monitor);
+        }
+
+        async function removeIgnorePattern(pattern) {
+            if (!activeDiffMonitorId) return;
+            const monitor = getMonitorById(activeDiffMonitorId);
+            if (!monitor) return;
+
+            const settings = parseAlertSettings(monitor);
+            const existing = Array.isArray(settings.ignorePatterns) ? settings.ignorePatterns : [];
+            settings.ignorePatterns = existing.filter(p => p !== pattern);
+
+            await saveAlertSettings(activeDiffMonitorId, settings);
+            renderIgnoreLists(monitor);
+        }
+
+        function renderDiffResults(changes) {
+            const resultsEl = document.getElementById('diff-results');
+            resultsEl.innerHTML = '';
+
+            if (!changes || changes.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'error-info';
+                empty.textContent = 'No changes detected.';
+                resultsEl.appendChild(empty);
+                return;
+            }
+
+            changes.forEach(change => {
+                const item = document.createElement('div');
+                item.className = 'diff-item';
+                if (change.type === 'content_added') item.classList.add('added');
+                if (change.type === 'content_removed') item.classList.add('removed');
+
+                const meta = document.createElement('div');
+                meta.className = 'diff-meta';
+                const hashLabel = change.blockHash ? ` | ${change.blockHash.slice(0, 8)}` : '';
+                meta.textContent = `${change.type || 'change'}${hashLabel}`;
+
+                const text = document.createElement('div');
+                text.textContent = change.message || 'Change detected';
+
+                item.appendChild(meta);
+                item.appendChild(text);
+
+                if (change.snippet && change.snippet !== change.message) {
+                    const snippet = document.createElement('div');
+                    snippet.className = 'diff-meta';
+                    snippet.textContent = change.snippet;
+                    item.appendChild(snippet);
+                }
+
+                if (change.blockHash) {
+                    const actions = document.createElement('div');
+                    actions.className = 'diff-actions';
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-secondary btn-small';
+                    btn.textContent = 'Ignore';
+                    btn.addEventListener('click', () => addIgnoreBlock(change.blockHash.slice(0, 8)));
+                    actions.appendChild(btn);
+                    item.appendChild(actions);
+                }
+
+                resultsEl.appendChild(item);
+            });
+        }
+
+        async function runDiff() {
+            if (!isCurrentGuildAdmin) {
+                alert('Admin permission required');
+                return;
+            }
+            if (!activeDiffMonitorId) return;
+
+            setDiffStatus('Running diff...');
+            document.getElementById('diff-results').innerHTML = '';
+
+            try {
+                const response = await fetch(`/api/monitors/${currentGuildId}/${activeDiffMonitorId}/diff`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Failed to compute diff');
+                }
+
+                renderDiffResults(data.changes || []);
+                setDiffStatus(data.hasChanges ? 'Changes detected.' : 'No changes detected.', 'success');
+            } catch (error) {
+                setDiffStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function openDiffModal(monitorId) {
+            if (!isCurrentGuildAdmin) {
+                alert('Admin permission required');
+                return;
+            }
+
+            const monitor = getMonitorById(monitorId);
+            if (!monitor) return;
+
+            activeDiffMonitorId = monitorId;
+            document.getElementById('diff-monitor-name').textContent = `${monitor.name} (ID: ${monitor.id})`;
+            document.getElementById('diff-modal').classList.add('active');
+            document.getElementById('diff-results').innerHTML = '';
+            document.getElementById('ignore-block-input').value = '';
+            document.getElementById('ignore-pattern-input').value = '';
+            setDiffStatus('');
+            renderIgnoreLists(monitor);
+        }
+
+        function closeDiffModal() {
+            document.getElementById('diff-modal').classList.remove('active');
+            activeDiffMonitorId = null;
         }
 
         // Toggle monitor (pause/resume)
@@ -1092,6 +1553,34 @@
                 document.getElementById('edit-modal').classList.remove('active');
                 editingMonitorId = null;
             }
+        });
+
+        document.getElementById('diff-run-btn').addEventListener('click', runDiff);
+
+        document.getElementById('diff-close-btn').addEventListener('click', () => {
+            closeDiffModal();
+        });
+
+        document.getElementById('diff-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'diff-modal') {
+                closeDiffModal();
+            }
+        });
+
+        document.getElementById('ignore-block-add-btn').addEventListener('click', async () => {
+            const input = document.getElementById('ignore-block-input');
+            const value = input.value.trim();
+            if (!value) return;
+            await addIgnoreBlock(value);
+            input.value = '';
+        });
+
+        document.getElementById('ignore-pattern-add-btn').addEventListener('click', async () => {
+            const input = document.getElementById('ignore-pattern-input');
+            const value = input.value.trim();
+            if (!value) return;
+            await addIgnorePattern(value);
+            input.value = '';
         });
     </script>
 </body>
