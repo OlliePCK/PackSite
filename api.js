@@ -255,6 +255,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (me && me.authenticated) {
         packBotAPI.user = me;
         updateUserUI(me);
+        // Connect WebSocket for authenticated users
+        connectWebSocket();
     }
 
     // Setup login button
