@@ -174,8 +174,7 @@ async function init() {
     }),
   ];
 
-  const logoUrl = new URL('./img/pck.svg', import.meta.url);
-  const svgData = await loadSVG(logoUrl.href);
+  const svgData = await loadSVG('/img/pck.svg');
   logoGroup = buildExtrudedLogo(svgData, logoMaterials);
   logoRadius = Number(logoGroup.userData?.radius) || 1;
   scene.add(logoGroup);
