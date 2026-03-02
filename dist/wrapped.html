@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wrapped - The Pack Discord Bot</title>
+    <link rel="icon" type="image/svg+xml" href="/img/pck.svg?v=2">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#00a0da">
+    <link rel="canonical" href="https://thepck.com/wrapped.html">
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="View your music listening stats and wrapped summary on The Pack Discord music bot.">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://thepck.com/wrapped.html">
+    <meta property="og:title" content="Wrapped - The Pack Discord Bot">
+    <meta property="og:description" content="View your music listening stats and wrapped summary on The Pack Discord music bot.">
+    <meta property="og:image" content="https://thepck.com/img/og-image.png">
+    <meta property="og:site_name" content="The Pack">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@ThePack">
+    <meta name="twitter:title" content="Wrapped - The Pack Discord Bot">
+    <meta name="twitter:description" content="View your music listening stats and wrapped summary on The Pack Discord music bot.">
+    <meta name="twitter:image" content="https://thepck.com/img/og-image.png">
+
+    <!-- Apple Mobile -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="The Pack">
+    <link rel="apple-touch-icon" href="/img/pck-192.png">
+
+    <style>
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            margin-bottom: 20px;
+            background: var(--surface-item-bg);
+            border: 1px solid var(--surface-item-border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: background 0.2s, color 0.2s;
+        }
+        .tab-btn:hover { background: rgba(255, 0, 106, 0.1); }
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: var(--surface-item-bg);
+            border: 1px solid var(--surface-item-border);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--surface-item-shadow);
+        }
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: var(--surface-item-bg);
+            border: 1px solid var(--surface-item-border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .list-item:hover {
+            border-color: rgba(var(--primary-rgb), 0.18);
+            transform: translateY(-1px);
+        }
+        .list-rank {
+            width: 30px;
+            font-weight: bold;
+            color: var(--primary);
+            text-align: center;
+        }
+        .list-thumb {
+            width: 45px;
+            height: 45px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: var(--bg-dark);
+        }
+        .list-info { flex: 1; min-width: 0; text-align: left; }
+        .list-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .list-meta { color: var(--text-secondary); font-size: 0.85em; }
+        .section-title {
+            font-size: 1.1em;
+            margin: 25px 0 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .compare-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .compare-col {
+            background: var(--surface-item-bg);
+            border: 1px solid var(--surface-item-border);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .compat-display {
+            text-align: center;
+            padding: 30px;
+            background: var(--surface-item-bg);
+            border: 1px solid var(--surface-item-border);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .compat-pct {
+            font-size: 3.5em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        .compare-picker {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            margin-bottom: 15px;
+        }
+        @media (max-width: 600px) {
+            .compare-row { grid-template-columns: 1fr; }
+        }
+    </style>
+  <script type="module" crossorigin src="/assets/main-O2y2ezbk.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/main-D5ImaiEP.css">
+</head>
+
+<body>
+    <canvas id="neuro"></canvas>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="/" class="nav-logo">
+            <img src="/img/texture.svg" alt="Pack Logo" class="nav-logo-img">
+        </a>
+        <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+        <div class="nav-links" id="nav-links">
+            <a href="/" class="nav-link">Home</a>
+            <a href="/dashboard.html" class="nav-link">Dashboard</a>
+            <a href="/nowplaying.html" class="nav-link">Now Playing</a>
+            <a href="/leaderboard.html" class="nav-link">Leaderboard</a>
+            <a href="/history.html" class="nav-link">History</a>
+            <a href="/wrapped.html" class="nav-link active">Wrapped</a>
+            <a href="/utilities.html" class="nav-link">Utilities</a>
+            <!-- Mobile-only items -->
+            <div class="mobile-nav-divider" id="mobile-divider"></div>
+            <div class="mobile-user-info" id="mobile-user-info">
+                <img class="user-avatar" id="mobile-user-avatar" alt="Avatar">
+                <span id="mobile-user-name"></span>
+            </div>
+            <a href="/settings.html" class="mobile-nav-item" id="mobile-settings"><svg class="nav-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Settings</a>
+            <a href="#" class="mobile-nav-item" id="mobile-logout"><svg class="nav-item-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14l5-5-5-5m5 5H9"/></svg>Logout</a>
+            <a href="#" class="mobile-login-btn" id="mobile-login">Login with Discord</a>
+        </div>
+        <div class="nav-auth" id="nav-auth">
+            <a href="#" id="login-btn" class="nav-btn">Login with Discord</a>
+            <div id="user-info" class="user-info hidden">
+                <div class="user-info-toggle">
+                    <img id="user-avatar" class="user-avatar" alt="Avatar" crossorigin="anonymous">
+                    <span id="user-name"></span>
+                    <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <div class="user-dropdown">
+                    <div class="user-dropdown-inner">
+                        <a href="/settings.html" class="dropdown-item">
+                            <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                            Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" id="logout-btn" class="dropdown-item" onclick="packBotAPI.logout()">
+                            <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4m7 14l5-5-5-5m5 5H9"/></svg>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <h1 class="page-title">🎧 Music Wrapped</h1>
+        <p class="page-subtitle">Your personal listening stats and server music highlights</p>
+
+        <!-- Not Logged In -->
+        <div id="not-logged-in" class="card">
+            <div class="empty-state">
+                <div class="empty-state-icon">🔐</div>
+                <h3>Login Required</h3>
+                <p>Please login with Discord to view your Wrapped</p>
+                <a href="#" onclick="packBotAPI.login(); return false;" class="nav-btn" style="display: inline-block; margin-top: 20px;">
+                    Login with Discord
+                </a>
+            </div>
+        </div>
+
+        <!-- Wrapped Content -->
+        <div id="wrapped-content" class="hidden">
+            <!-- Guild Selector -->
+            <div class="card">
+                <select id="guild-select" style="width: 100%; padding: 12px; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary);">
+                    <option value="">Select a server</option>
+                </select>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tab-bar">
+                <button class="tab-btn active" data-tab="my-stats">My Stats</button>
+                <button class="tab-btn" data-tab="server-stats">Server Stats</button>
+                <button class="tab-btn" data-tab="compare">Compare</button>
+            </div>
+
+            <!-- My Stats Tab -->
+            <div id="tab-my-stats" class="tab-content active">
+                <div id="my-stats-loading" class="card"><div class="empty-state"><div class="empty-state-icon">🎵</div><p>Select a server to see your stats</p></div></div>
+                <div id="my-stats-content" style="display: none;"></div>
+            </div>
+
+            <!-- Server Stats Tab -->
+            <div id="tab-server-stats" class="tab-content">
+                <div id="server-stats-loading" class="card"><div class="empty-state"><div class="empty-state-icon">🎵</div><p>Select a server to see server stats</p></div></div>
+                <div id="server-stats-content" style="display: none;"></div>
+            </div>
+
+            <!-- Compare Tab -->
+            <div id="tab-compare" class="tab-content">
+                <div class="card">
+                    <select id="compare-user-select" class="compare-picker">
+                        <option value="">Select a user to compare with...</option>
+                    </select>
+                </div>
+                <div id="compare-content" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/api.js?v=3"></script>
+    <script>
+        let currentUser = null;
+        let currentGuildId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const me = await packBotAPI.getMe();
+            if (me && me.authenticated) {
+                currentUser = me;
+                document.getElementById('not-logged-in').classList.add('hidden');
+                document.getElementById('wrapped-content').classList.remove('hidden');
+                await loadGuilds();
+                setupTabs();
+            }
+        });
+
+        async function loadGuilds() {
+            const res = await fetch('/api/guilds', { credentials: 'include' });
+            const data = await res.json();
+            if (!data.guilds) return;
+
+            const select = document.getElementById('guild-select');
+            data.guilds.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.name;
+                select.appendChild(opt);
+            });
+
+            select.addEventListener('change', (e) => {
+                currentGuildId = e.target.value;
+                if (currentGuildId) {
+                    loadActiveTab();
+                    loadCompareUsers();
+                }
+            });
+
+            // Auto-select first guild
+            if (data.guilds.length > 0) {
+                currentGuildId = data.guilds[0].id;
+                select.value = currentGuildId;
+                loadActiveTab();
+                loadCompareUsers();
+            }
+        }
+
+        function setupTabs() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+                    loadActiveTab();
+                });
+            });
+        }
+
+        function loadActiveTab() {
+            if (!currentGuildId) return;
+            const active = document.querySelector('.tab-btn.active');
+            if (active.dataset.tab === 'my-stats') loadMyStats();
+            else if (active.dataset.tab === 'server-stats') loadServerStats();
+        }
+
+        async function loadMyStats() {
+            if (!currentGuildId || !currentUser) return;
+            const data = await packBotAPI.getWrappedUser(currentGuildId, currentUser.id);
+            const container = document.getElementById('my-stats-content');
+            const loading = document.getElementById('my-stats-loading');
+
+            if (!data || !data.stats || data.stats.totalTracks === 0) {
+                loading.style.display = 'block';
+                container.style.display = 'none';
+                loading.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎧</div><h3>No Data</h3><p>No listening history in this server yet!</p></div>';
+                return;
+            }
+
+            loading.style.display = 'none';
+            container.style.display = 'block';
+
+            const hours = Math.floor(data.stats.totalSeconds / 3600);
+            const mins = Math.floor((data.stats.totalSeconds % 3600) / 60);
+
+            container.innerHTML = `
+                <div class="stat-grid">
+                    <div class="stat-card"><div class="stat-value">${hours}h ${mins}m</div><div class="stat-label">Listening Time</div></div>
+                    <div class="stat-card"><div class="stat-value">${data.stats.totalTracks}</div><div class="stat-label">Tracks Played</div></div>
+                    <div class="stat-card"><div class="stat-value">${data.stats.uniqueTracks}</div><div class="stat-label">Unique Tracks</div></div>
+                    ${data.favoriteHour !== null ? `<div class="stat-card"><div class="stat-value">${formatHour(data.favoriteHour)}</div><div class="stat-label">Peak Hour</div></div>` : ''}
+                </div>
+                <div class="section-title">🎵 Top Tracks</div>
+                ${renderList(data.topTracks, 'track')}
+                <div class="section-title">🎤 Top Artists</div>
+                ${renderList(data.topArtists, 'artist')}
+            `;
+        }
+
+        async function loadServerStats() {
+            if (!currentGuildId) return;
+            const data = await packBotAPI.getWrappedServer(currentGuildId);
+            const container = document.getElementById('server-stats-content');
+            const loading = document.getElementById('server-stats-loading');
+
+            if (!data || !data.stats || data.stats.totalTracks === 0) {
+                loading.style.display = 'block';
+                container.style.display = 'none';
+                loading.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎧</div><h3>No Data</h3><p>No listening history in this server yet!</p></div>';
+                return;
+            }
+
+            loading.style.display = 'none';
+            container.style.display = 'block';
+
+            const hours = Math.floor(data.stats.totalSeconds / 3600);
+            const mins = Math.floor((data.stats.totalSeconds % 3600) / 60);
+
+            container.innerHTML = `
+                <div class="stat-grid">
+                    <div class="stat-card"><div class="stat-value">${hours}h ${mins}m</div><div class="stat-label">Total Listening</div></div>
+                    <div class="stat-card"><div class="stat-value">${data.stats.totalTracks}</div><div class="stat-label">Tracks Played</div></div>
+                    <div class="stat-card"><div class="stat-value">${data.stats.uniqueArtists}</div><div class="stat-label">Unique Artists</div></div>
+                    <div class="stat-card"><div class="stat-value">${data.stats.uniqueTracks}</div><div class="stat-label">Unique Tracks</div></div>
+                </div>
+                <div class="section-title">🎵 Top Tracks</div>
+                ${renderList(data.topTracks, 'track')}
+                <div class="section-title">👑 Top Listeners</div>
+                ${data.topListeners.map((l, i) => {
+                    const h = Math.floor(l.totalSeconds / 3600);
+                    const m = Math.floor((l.totalSeconds % 3600) / 60);
+                    return `<div class="list-item"><div class="list-rank">#${i + 1}</div><div class="list-info"><div class="list-title">${esc(l.username)}</div><div class="list-meta">${h}h ${m}m &bull; ${l.playCount} plays</div></div></div>`;
+                }).join('')}
+                <div class="section-title">🎤 Top Artists</div>
+                ${renderList(data.topArtists, 'artist')}
+            `;
+        }
+
+        async function loadCompareUsers() {
+            if (!currentGuildId) return;
+            // Use the history stats endpoint to get top users as compare options
+            const data = await packBotAPI.getHistoryStats(currentGuildId);
+            const select = document.getElementById('compare-user-select');
+            // Clear existing options except first
+            while (select.options.length > 1) select.remove(1);
+
+            if (data && data.topUsers) {
+                data.topUsers.forEach(u => {
+                    if (u.odUserId === currentUser.id) return;
+                    const opt = document.createElement('option');
+                    opt.value = u.odUserId;
+                    opt.textContent = u.username;
+                    select.appendChild(opt);
+                });
+            }
+
+            select.onchange = async (e) => {
+                if (!e.target.value) return;
+                await loadCompare(e.target.value);
+            };
+        }
+
+        async function loadCompare(otherUserId) {
+            if (!currentGuildId || !currentUser) return;
+            const data = await packBotAPI.getWrappedCompare(currentGuildId, currentUser.id, otherUserId);
+            const container = document.getElementById('compare-content');
+
+            if (!data || data.error) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+
+            const fmtTime = (s) => { const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return `${h}h ${m}m`; };
+
+            container.innerHTML = `
+                <div class="compat-display">
+                    <div class="compat-pct">${data.compatibility}%</div>
+                    <div style="color: var(--text-secondary); margin-top: 5px;">Music Compatibility</div>
+                </div>
+                <div class="compare-row">
+                    <div class="compare-col">
+                        <h3 style="margin: 0 0 10px;">${esc(data.user1.username)}</h3>
+                        <div class="list-meta">${fmtTime(data.user1.totalSeconds)} &bull; ${data.user1.totalTracks} plays</div>
+                        <div class="section-title" style="margin-top: 15px;">Top Tracks</div>
+                        ${renderList(data.user1.topTracks, 'track')}
+                    </div>
+                    <div class="compare-col">
+                        <h3 style="margin: 0 0 10px;">${esc(data.user2.username)}</h3>
+                        <div class="list-meta">${fmtTime(data.user2.totalSeconds)} &bull; ${data.user2.totalTracks} plays</div>
+                        <div class="section-title" style="margin-top: 15px;">Top Tracks</div>
+                        ${renderList(data.user2.topTracks, 'track')}
+                    </div>
+                </div>
+                ${data.sharedArtists.length > 0 ? `
+                <div class="section-title" style="margin-top: 20px;">🎤 Shared Artists (${data.sharedArtists.length})</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    ${data.sharedArtists.map(a => `<span style="padding: 6px 12px; background: rgba(255, 0, 106, 0.2); border: 1px solid var(--primary); border-radius: 20px; font-size: 0.85em;">${esc(a)}</span>`).join('')}
+                </div>` : ''}
+            `;
+        }
+
+        function renderList(items, type) {
+            if (!items || items.length === 0) return '<p style="color: var(--text-secondary);">No data</p>';
+            return items.map((item, i) => {
+                if (type === 'track') {
+                    return `<div class="list-item">
+                        <div class="list-rank">#${i + 1}</div>
+                        ${item.thumbnail ? `<img class="list-thumb" src="${item.thumbnail}" alt="" onerror="this.style.display='none'">` : ''}
+                        <div class="list-info">
+                            <div class="list-title">${esc(item.title)}</div>
+                            <div class="list-meta">${esc(item.artist || '')} &bull; ${item.playCount} plays</div>
+                        </div>
+                    </div>`;
+                } else {
+                    return `<div class="list-item">
+                        <div class="list-rank">#${i + 1}</div>
+                        <div class="list-info">
+                            <div class="list-title">${esc(item.artist)}</div>
+                            <div class="list-meta">${item.playCount} plays</div>
+                        </div>
+                    </div>`;
+                }
+            }).join('');
+        }
+
+        function formatHour(hour) {
+            if (hour === 0) return '12 AM';
+            if (hour === 12) return '12 PM';
+            return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
+        }
+
+        function esc(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

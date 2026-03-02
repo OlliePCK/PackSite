@@ -247,6 +247,7 @@
             <a href="/nowplaying.html" class="nav-link">Now Playing</a>
             <a href="/leaderboard.html" class="nav-link">Leaderboard</a>
             <a href="/history.html" class="nav-link">History</a>
+            <a href="/wrapped.html" class="nav-link">Wrapped</a>
             <a href="/utilities.html" class="nav-link">Utilities</a>
             <!-- Mobile-only items -->
             <div class="mobile-nav-divider" id="mobile-divider"></div>
@@ -354,6 +355,22 @@
                 <!-- Recent Activity -->
                 <div class="section-title">📅 Recent Activity</div>
                 <div id="recent-plays-list"></div>
+
+                <!-- Music Compatibility (shown when viewing another user) -->
+                <div id="compatibility-section" style="display: none;">
+                    <div class="section-title">🎵 Music Taste Compatibility</div>
+                    <div class="column-section" style="text-align: center; padding: 25px;">
+                        <div id="compat-percentage" style="font-size: 3em; font-weight: bold; color: var(--primary);"></div>
+                        <div id="compat-label" style="color: var(--text-secondary); margin: 5px 0 15px;"></div>
+                        <div id="compat-shared" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;"></div>
+                    </div>
+                </div>
+
+                <!-- Saved Quotes -->
+                <div id="quotes-section" style="display: none;">
+                    <div class="section-title">💬 Saved Quotes</div>
+                    <div id="quotes-list"></div>
+                </div>
             </div>
 
             <!-- No Data State -->
@@ -492,10 +509,67 @@
                     </div>
                 `).join('') || '<p style="color: var(--text-secondary);">No recent activity</p>';
 
+                // Load compatibility if viewing another user
+                loadCompatibility();
+                // Load quotes
+                loadQuotes();
+
             } catch (error) {
                 console.error('Failed to load profile:', error);
                 document.getElementById('profile-card').style.display = 'none';
                 document.getElementById('no-data').style.display = 'block';
+            }
+        }
+
+        async function loadCompatibility() {
+            try {
+                const me = await packBotAPI.getMe();
+                if (!me || !me.authenticated || me.id === profileUserId) return;
+
+                const data = await packBotAPI.getCompatibility(me.id, profileUserId, currentGuildId);
+                if (!data || data.error) return;
+
+                document.getElementById('compatibility-section').style.display = 'block';
+                document.getElementById('compat-percentage').textContent = `${data.compatibility}%`;
+
+                let label = 'Strangers in music';
+                if (data.compatibility >= 80) label = 'Musical soulmates!';
+                else if (data.compatibility >= 60) label = 'Great taste overlap';
+                else if (data.compatibility >= 40) label = 'Some common ground';
+                else if (data.compatibility >= 20) label = 'A few shared vibes';
+                document.getElementById('compat-label').textContent = label;
+
+                const sharedEl = document.getElementById('compat-shared');
+                if (data.sharedArtists && data.sharedArtists.length > 0) {
+                    sharedEl.innerHTML = data.sharedArtists.slice(0, 15).map(a =>
+                        `<span class="badge"><span class="badge-icon">🎤</span>${escapeHtml(a)}</span>`
+                    ).join('');
+                } else {
+                    sharedEl.innerHTML = '<span style="color: var(--text-secondary);">No shared artists</span>';
+                }
+            } catch (e) {
+                console.error('Failed to load compatibility:', e);
+            }
+        }
+
+        async function loadQuotes() {
+            try {
+                if (!currentGuildId) return;
+                const data = await packBotAPI.getUserQuotes(currentGuildId, profileUserId, 1, 5);
+                if (!data || !data.quotes || data.quotes.length === 0) return;
+
+                document.getElementById('quotes-section').style.display = 'block';
+                const list = document.getElementById('quotes-list');
+                list.innerHTML = data.quotes.map(q => `
+                    <div class="recent-item">
+                        <div style="flex: 1; text-align: left;">
+                            <div style="font-style: italic; margin-bottom: 4px;">"${escapeHtml(q.content.substring(0, 200))}"</div>
+                            <div class="track-meta">Quote #${q.id} • ${formatTimeAgo(q.createdAt)}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Failed to load quotes:', e);
             }
         }
 

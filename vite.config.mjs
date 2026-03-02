@@ -15,6 +15,7 @@ export default defineConfig({
         profile: resolve(__dirname, 'profile.html'),
         settings: resolve(__dirname, 'settings.html'),
         utilities: resolve(__dirname, 'utilities.html'),
+        wrapped: resolve(__dirname, 'wrapped.html'),
       },
     },
   },

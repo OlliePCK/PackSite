@@ -198,6 +198,44 @@ class PackBotAPI {
     async getPlayerStatus(guildId) {
         return this.fetch(`/player/${guildId}/status`);
     }
+
+    // Quotes
+    async getQuotes(guildId, page = 1, limit = 20) {
+        return this.fetch(`/quotes/${guildId}?page=${page}&limit=${limit}`);
+    }
+
+    async getRandomQuote(guildId) {
+        return this.fetch(`/quotes/${guildId}/random`);
+    }
+
+    async getUserQuotes(guildId, userId, page = 1, limit = 20) {
+        return this.fetch(`/quotes/${guildId}/user/${userId}?page=${page}&limit=${limit}`);
+    }
+
+    // Starboard
+    async getStarboard(guildId, page = 1, limit = 20) {
+        return this.fetch(`/starboard/${guildId}?page=${page}&limit=${limit}`);
+    }
+
+    // Compatibility
+    async getCompatibility(userId, otherUserId, guildId = null) {
+        let url = `/profile/${userId}/compatibility/${otherUserId}`;
+        if (guildId) url += `?guildId=${guildId}`;
+        return this.fetch(url);
+    }
+
+    // Wrapped
+    async getWrappedUser(guildId, userId) {
+        return this.fetch(`/wrapped/${guildId}/${userId}`);
+    }
+
+    async getWrappedServer(guildId) {
+        return this.fetch(`/wrapped/${guildId}/server`);
+    }
+
+    async getWrappedCompare(guildId, userId1, userId2) {
+        return this.fetch(`/wrapped/${guildId}/compare/${userId1}/${userId2}`);
+    }
 }
 
 // Create global API instance

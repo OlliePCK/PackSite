@@ -57,6 +57,7 @@
             <a href="/nowplaying.html" class="nav-link">Now Playing</a>
             <a href="/leaderboard.html" class="nav-link">Leaderboard</a>
             <a href="/history.html" class="nav-link">History</a>
+            <a href="/wrapped.html" class="nav-link">Wrapped</a>
             <a href="/utilities.html" class="nav-link">Utilities</a>
             <!-- Mobile-only items -->
             <div class="mobile-nav-divider" id="mobile-divider"></div>
@@ -195,6 +196,12 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Starboard Highlights -->
+                <div class="dashboard-card" id="starboard-card" style="display: none;">
+                    <h3>⭐ Starboard Highlights</h3>
+                    <div id="starboard-list" class="guild-list"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -239,6 +246,9 @@
 
             // Load bot status
             loadBotStatus();
+
+            // Load starboard for the first guild
+            loadStarboard(user);
         }
         
         async function loadGuilds() {
@@ -381,6 +391,30 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        async function loadStarboard(user) {
+            try {
+                // Use first guild from user's guilds
+                if (!user.guilds || user.guilds.length === 0) return;
+                const guildId = user.guilds[0].id;
+                const data = await packBotAPI.getStarboard(guildId, 1, 5);
+                if (!data || !data.entries || data.entries.length === 0) return;
+
+                document.getElementById('starboard-card').style.display = 'block';
+                const list = document.getElementById('starboard-list');
+                list.innerHTML = data.entries.map(e => `
+                    <div class="guild-item" style="cursor: default;">
+                        <span style="font-size: 1.5em;">⭐</span>
+                        <div class="guild-info">
+                            <div class="guild-name">${escapeHtml((e.content || '').substring(0, 60))}${(e.content || '').length > 60 ? '...' : ''}</div>
+                            <div class="guild-role">${e.starCount} stars</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Failed to load starboard:', e);
+            }
         }
     </script>
 </body>
