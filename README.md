@@ -10,7 +10,6 @@ Frontend website for The Pack Discord music bot.
 - dY?+ Leaderboard - Gaming playtime tracking
 - dY"o History - Listening history and stats
 - dY"§ YouTube - Channel notifications management
-- dY"" Monitors - Web page monitoring (Shopify, Ticketmaster, etc.)
 - dY"ñ PWA Support - Install as app on iOS/Android with lock screen controls
 
 ## Tech Stack
