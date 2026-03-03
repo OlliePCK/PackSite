@@ -33,6 +33,22 @@
     <link rel="stylesheet" href="/styles.css">
 
     <style>
+        #utilities-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #utility-youtube.utility-section.active {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #utility-youtube .card + .card {
+            margin-top: 0;
+        }
+
         .utility-guild-row {
             display: flex;
             gap: 10px;
@@ -169,6 +185,13 @@
         .youtube-add-form .form-input {
             flex: 1;
             min-width: 200px;
+        }
+
+        @media (max-width: 720px) {
+            .utility-guild-row > #guild-select,
+            .utility-guild-row > #set-favorite-btn {
+                width: 100%;
+            }
         }
 
         .error-message {
